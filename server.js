@@ -2,24 +2,25 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 
+const User = require("./models/User");
+
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-// 🔐 Secure MongoDB connection (from ENV)
 const MONGO_URI = process.env.MONGO_URI;
 
 mongoose.connect(MONGO_URI)
 .then(() => console.log("MongoDB Connected ✅"))
 .catch(err => console.log(err));
 
-// Home route
+// Home
 app.get("/", (req, res) => {
     res.send("Cricbet786 Backend Running 🚀");
 });
 
-// Test API
+// Test
 app.get("/api/test", (req, res) => {
     res.json({
         status: "success",
@@ -27,7 +28,40 @@ app.get("/api/test", (req, res) => {
     });
 });
 
-// Server start
+// 🔐 REGISTER API
+app.post("/api/register", async (req, res) => {
+    try {
+        const { username, password } = req.body;
+
+        const user = new User({ username, password });
+        await user.save();
+
+        res.json({ message: "User registered ✅" });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 🔐 LOGIN API
+app.post("/api/login", async (req, res) => {
+    try {
+        const { username, password } = req.body;
+
+        const user = await User.findOne({ username, password });
+
+        if (!user) {
+            return res.status(400).json({ message: "Invalid credentials ❌" });
+        }
+
+        res.json({
+            message: "Login successful ✅",
+            user
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 const PORT = process.env.PORT || 10000;
 
 app.listen(PORT, () => {
