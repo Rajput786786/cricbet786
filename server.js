@@ -4,24 +4,19 @@ const cors = require("cors");
 
 const app = express();
 
-// Middlewares
 app.use(cors());
 app.use(express.json());
 
-// ✅ MongoDB Connection (Already configured)
-const MONGO_URI = "mongodb+srv://pkg732853_db_user:kLVOc2OrbTXwRfcd@cluster0.wadutkh.mongodb.net/?retryWrites=true&w=majority";
+// 🔐 Secure MongoDB connection (from ENV)
+const MONGO_URI = process.env.MONGO_URI;
 
-// Connect MongoDB
-mongoose.connect(MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-})
-.then(() => console.log("✅ MongoDB Connected Successfully"))
-.catch(err => console.log("❌ MongoDB Error:", err));
+mongoose.connect(MONGO_URI)
+.then(() => console.log("MongoDB Connected ✅"))
+.catch(err => console.log(err));
 
-// Root route
+// Home route
 app.get("/", (req, res) => {
-    res.send("🚀 Cricbet786 Backend Running");
+    res.send("Cricbet786 Backend Running 🚀");
 });
 
 // Test API
@@ -36,5 +31,5 @@ app.get("/api/test", (req, res) => {
 const PORT = process.env.PORT || 10000;
 
 app.listen(PORT, () => {
-    console.log(`🔥 Server running on port ${PORT}`);
+    console.log(`Server running on port ${PORT}`);
 });
