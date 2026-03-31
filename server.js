@@ -1,3 +1,5 @@
+// FULL MERGED SAFE CODE (OLD + SESSION)
+
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -24,13 +26,54 @@ const userSchema = new mongoose.Schema({
 });
 const User = mongoose.model("User", userSchema);
 
-// ================= SESSION MODEL =================
+// ================= MATCH =================
+const matchSchema = new mongoose.Schema({
+  teamA: String,
+  teamB: String,
+  oddsA: Number,
+  oddsB: Number,
+  status: { type: String, default: "live" }
+});
+const Match = mongoose.model("Match", matchSchema);
+
+// ================= BET =================
+const betSchema = new mongoose.Schema({
+  username: String,
+  matchId: String,
+  team: String,
+  amount: Number,
+  odds: Number,
+  result: { type: String, default: "pending" }
+});
+const Bet = mongoose.model("Bet", betSchema);
+
+// ================= WITHDRAW =================
+const withdrawSchema = new mongoose.Schema({
+  username: String,
+  amount: Number,
+  accountNumber: String,
+  ifsc: String,
+  name: String,
+  status: { type: String, default: "pending" }
+});
+const Withdraw = mongoose.model("Withdraw", withdrawSchema);
+
+// ================= DEPOSIT =================
+const depositSchema = new mongoose.Schema({
+  username: String,
+  amount: Number,
+  utr: String,
+  status: { type: String, default: "pending" }
+});
+const Deposit = mongoose.model("Deposit", depositSchema);
+
+// ================= SESSION =================
 const sessionSchema = new mongoose.Schema({
   question: String,
   yesRate: Number,
   noRate: Number,
-  status: { type: String, default: "active" }, // active / suspended / closed
-  result: { type: String, default: "pending" } // yes / no
+  status: { type: String, default: "active" },
+  result: { type: String, default: "pending" }
 });
 const Session = mongoose.model("Session", sessionSchema);
 
@@ -38,122 +81,178 @@ const Session = mongoose.model("Session", sessionSchema);
 const sessionBetSchema = new mongoose.Schema({
   username: String,
   sessionId: String,
-  type: String, // yes / no
+  type: String,
   amount: Number,
   rate: Number,
   result: { type: String, default: "pending" }
 });
 const SessionBet = mongoose.model("SessionBet", sessionBetSchema);
 
-// ================= CREATE SESSION =================
-app.post("/api/create-session", async (req, res) => {
-  try {
-    const { question, yesRate, noRate, secretKey } = req.body;
-
-    if (secretKey !== ADMIN_KEY) {
-      return res.status(403).json({ message: "Unauthorized ❌" });
-    }
-
-    const session = new Session({ question, yesRate, noRate });
-    await session.save();
-
-    res.json({ message: "Session created ✅", session });
-
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+// ================= REGISTER =================
+app.post("/api/register", async (req, res) => {
+  const user = new User(req.body);
+  await user.save();
+  res.json({ message: "User registered ✅" });
 });
 
-// ================= GET SESSION =================
-app.get("/api/sessions", async (req, res) => {
-  const sessions = await Session.find();
-  res.json(sessions);
+// ================= LOGIN =================
+app.post("/api/login", async (req, res) => {
+  const user = await User.findOne(req.body);
+  if (!user) return res.status(400).json({ message: "Invalid ❌" });
+  res.json({ message: "Login success ✅", user });
 });
 
-// ================= PLACE SESSION BET =================
-app.post("/api/session-bet", async (req, res) => {
-  try {
-    const { username, sessionId, type, amount } = req.body;
+// ================= CREATE MATCH =================
+app.post("/api/create-match", async (req, res) => {
+  const match = new Match(req.body);
+  await match.save();
+  res.json({ message: "Match created ✅", match });
+});
 
-    if (amount < 100) {
-      return res.status(400).json({ message: "Minimum 100 ❌" });
-    }
+// ================= GET MATCH =================
+app.get("/api/matches", async (req, res) => {
+  res.json(await Match.find());
+});
 
-    const user = await User.findOne({ username });
-    const session = await Session.findById(sessionId);
+// ================= PLACE BET =================
+app.post("/api/place-bet", async (req, res) => {
+  const { username, matchId, team, amount } = req.body;
 
-    if (!user) return res.status(404).json({ message: "User not found ❌" });
-    if (!session) return res.status(404).json({ message: "Session not found ❌" });
+  const user = await User.findOne({ username });
+  const match = await Match.findById(matchId);
 
-    if (session.status !== "active") {
-      return res.status(400).json({ message: "Session closed ❌" });
-    }
+  if (!user || !match) return res.json({ message: "Error ❌" });
 
-    if (user.balance < amount) {
-      return res.status(400).json({ message: "Low balance ❌" });
-    }
+  if (user.balance < amount) return res.json({ message: "Low balance ❌" });
 
-    let rate = type === "yes" ? session.yesRate : session.noRate;
+  let odds = team === match.teamA ? match.oddsA : match.oddsB;
 
-    user.balance -= amount;
-    await user.save();
+  user.balance -= amount;
+  await user.save();
 
-    const bet = new SessionBet({
-      username,
-      sessionId,
-      type,
-      amount,
-      rate
-    });
+  await new Bet({ username, matchId, team, amount, odds }).save();
+
+  res.json({ message: "Bet placed ✅" });
+});
+
+// ================= RESULT =================
+app.post("/api/declare-result", async (req, res) => {
+  const { matchId, winnerTeam, secretKey } = req.body;
+
+  if (secretKey !== ADMIN_KEY) return res.json({ message: "Unauthorized ❌" });
+
+  const bets = await Bet.find({ matchId });
+
+  for (let bet of bets) {
+    if (bet.team === winnerTeam) {
+      const user = await User.findOne({ username: bet.username });
+      user.balance += bet.amount * bet.odds;
+      await user.save();
+      bet.result = "win";
+    } else bet.result = "lose";
 
     await bet.save();
-
-    res.json({
-      message: "Session bet placed ✅",
-      balance: user.balance
-    });
-
-  } catch (err) {
-    res.status(500).json({ error: err.message });
   }
+
+  res.json({ message: "Result declared ✅" });
 });
 
-// ================= DECLARE SESSION RESULT =================
+// ================= DEPOSIT =================
+app.post("/api/deposit-request", async (req, res) => {
+  await new Deposit(req.body).save();
+  res.json({ message: "Deposit request sent ✅" });
+});
+
+app.post("/api/approve-deposit", async (req, res) => {
+  const { depositId, secretKey } = req.body;
+
+  if (secretKey !== ADMIN_KEY) return res.json({ message: "Unauthorized ❌" });
+
+  const d = await Deposit.findById(depositId);
+  const u = await User.findOne({ username: d.username });
+
+  if (d.status !== "pending") return res.json({ message: "Already ❌" });
+
+  u.balance += d.amount;
+  await u.save();
+
+  d.status = "approved";
+  await d.save();
+
+  res.json({ message: "Deposit approved ✅" });
+});
+
+// ================= WITHDRAW =================
+app.post("/api/withdraw-request", async (req, res) => {
+  await new Withdraw(req.body).save();
+  res.json({ message: "Withdraw request sent ✅" });
+});
+
+app.post("/api/approve-withdraw", async (req, res) => {
+  const { withdrawId, secretKey } = req.body;
+
+  if (secretKey !== ADMIN_KEY) return res.json({ message: "Unauthorized ❌" });
+
+  const w = await Withdraw.findById(withdrawId);
+  const u = await User.findOne({ username: w.username });
+
+  u.balance -= w.amount;
+  await u.save();
+
+  w.status = "approved";
+  await w.save();
+
+  res.json({ message: "Withdraw approved ✅" });
+});
+
+// ================= SESSION =================
+app.post("/api/create-session", async (req, res) => {
+  if (req.body.secretKey !== ADMIN_KEY)
+    return res.json({ message: "Unauthorized ❌" });
+
+  await new Session(req.body).save();
+  res.json({ message: "Session created ✅" });
+});
+
+app.get("/api/sessions", async (req, res) => {
+  res.json(await Session.find());
+});
+
+app.post("/api/session-bet", async (req, res) => {
+  const { username, sessionId, type, amount } = req.body;
+
+  const user = await User.findOne({ username });
+  const session = await Session.findById(sessionId);
+
+  let rate = type === "yes" ? session.yesRate : session.noRate;
+
+  user.balance -= amount;
+  await user.save();
+
+  await new SessionBet({ username, sessionId, type, amount, rate }).save();
+
+  res.json({ message: "Session bet placed ✅" });
+});
+
 app.post("/api/session-result", async (req, res) => {
-  try {
-    const { sessionId, result, secretKey } = req.body;
+  if (req.body.secretKey !== ADMIN_KEY)
+    return res.json({ message: "Unauthorized ❌" });
 
-    if (secretKey !== ADMIN_KEY) {
-      return res.status(403).json({ message: "Unauthorized ❌" });
-    }
+  const bets = await SessionBet.find({ sessionId: req.body.sessionId });
 
-    const bets = await SessionBet.find({ sessionId });
+  for (let b of bets) {
+    const u = await User.findOne({ username: b.username });
 
-    for (let bet of bets) {
-      const user = await User.findOne({ username: bet.username });
+    if (b.type === req.body.result) {
+      u.balance += b.amount + (b.amount * b.rate) / 100;
+      b.result = "win";
+    } else b.result = "lose";
 
-      if (bet.type === result) {
-        let win = bet.amount * (bet.rate / 100);
-        user.balance += bet.amount + win;
-        bet.result = "win";
-      } else {
-        bet.result = "lose";
-      }
-
-      await user.save();
-      await bet.save();
-    }
-
-    await Session.findByIdAndUpdate(sessionId, {
-      status: "closed",
-      result
-    });
-
-    res.json({ message: "Session result declared ✅" });
-
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    await u.save();
+    await b.save();
   }
+
+  res.json({ message: "Session result declared ✅" });
 });
 
 // ================= SERVER =================
@@ -161,7 +260,4 @@ app.get("/", (req, res) => {
   res.send("Cricbet786 Running 🚀");
 });
 
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-});
+app.listen(10000, () => console.log("🚀 Server Running"));
