@@ -13,10 +13,10 @@ mongoose.connect(MONGO_URI)
 .then(() => console.log("✅ MongoDB Connected"))
 .catch(err => console.log("❌ MongoDB Error:", err));
 
-// 🔐 SECRET KEY (admin panel)
+// 🔐 SECRET KEY
 const ADMIN_KEY = "LR_ADMIN_786";
 
-// ================= USER MODEL =================
+// ================= USER =================
 const userSchema = new mongoose.Schema({
   username: String,
   password: String,
@@ -24,7 +24,7 @@ const userSchema = new mongoose.Schema({
 });
 const User = mongoose.model("User", userSchema);
 
-// ================= MATCH MODEL =================
+// ================= MATCH =================
 const matchSchema = new mongoose.Schema({
   teamA: String,
   teamB: String,
@@ -34,7 +34,7 @@ const matchSchema = new mongoose.Schema({
 });
 const Match = mongoose.model("Match", matchSchema);
 
-// ================= BET MODEL =================
+// ================= BET =================
 const betSchema = new mongoose.Schema({
   username: String,
   matchId: String,
@@ -45,7 +45,7 @@ const betSchema = new mongoose.Schema({
 });
 const Bet = mongoose.model("Bet", betSchema);
 
-// ================= WITHDRAW MODEL =================
+// ================= WITHDRAW =================
 const withdrawSchema = new mongoose.Schema({
   username: String,
   amount: Number,
@@ -55,6 +55,15 @@ const withdrawSchema = new mongoose.Schema({
   status: { type: String, default: "pending" }
 });
 const Withdraw = mongoose.model("Withdraw", withdrawSchema);
+
+// ================= 🔥 NEW: DEPOSIT MODEL =================
+const depositSchema = new mongoose.Schema({
+  username: String,
+  amount: Number,
+  utr: String,
+  status: { type: String, default: "pending" }
+});
+const Deposit = mongoose.model("Deposit", depositSchema);
 
 // ================= REGISTER =================
 app.post("/api/register", async (req, res) => {
@@ -74,9 +83,7 @@ app.post("/api/login", async (req, res) => {
     const { username, password } = req.body;
     const user = await User.findOne({ username, password });
 
-    if (!user) {
-      return res.status(400).json({ message: "Invalid ❌" });
-    }
+    if (!user) return res.status(400).json({ message: "Invalid ❌" });
 
     res.json({ message: "Login success ✅", user });
   } catch (err) {
@@ -89,20 +96,17 @@ app.post("/api/add-balance", async (req, res) => {
   try {
     const { username, amount, secretKey } = req.body;
 
-    if (secretKey !== ADMIN_KEY) {
+    if (secretKey !== ADMIN_KEY)
       return res.status(403).json({ message: "Unauthorized ❌" });
-    }
 
-    if (amount < 200) {
+    if (amount < 200)
       return res.status(400).json({ message: "Minimum deposit 200 ❌" });
-    }
 
     const user = await User.findOne({ username });
     user.balance += amount;
     await user.save();
 
     res.json({ message: "Balance added ✅", newBalance: user.balance });
-
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -111,8 +115,7 @@ app.post("/api/add-balance", async (req, res) => {
 // ================= CREATE MATCH =================
 app.post("/api/create-match", async (req, res) => {
   try {
-    const { teamA, teamB, oddsA, oddsB } = req.body;
-    const match = new Match({ teamA, teamB, oddsA, oddsB });
+    const match = new Match(req.body);
     await match.save();
     res.json({ message: "Match created ✅", match });
   } catch (err) {
@@ -131,19 +134,17 @@ app.post("/api/place-bet", async (req, res) => {
   try {
     const { username, matchId, team, amount } = req.body;
 
-    if (amount < 100) {
+    if (amount < 100)
       return res.status(400).json({ message: "Minimum bet 100 ❌" });
-    }
 
     const user = await User.findOne({ username });
     const match = await Match.findById(matchId);
 
-    if (!user) return res.status(404).json({ message: "User not found ❌" });
-    if (!match) return res.status(404).json({ message: "Match not found ❌" });
+    if (!user || !match)
+      return res.status(404).json({ message: "Not found ❌" });
 
-    if (user.balance < amount) {
+    if (user.balance < amount)
       return res.status(400).json({ message: "Low balance ❌" });
-    }
 
     let odds = team === match.teamA ? match.oddsA : match.oddsB;
 
@@ -153,10 +154,7 @@ app.post("/api/place-bet", async (req, res) => {
     const bet = new Bet({ username, matchId, team, amount, odds });
     await bet.save();
 
-    res.json({
-      message: "Bet placed ✅",
-      remainingBalance: user.balance
-    });
+    res.json({ message: "Bet placed ✅", balance: user.balance });
 
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -168,17 +166,15 @@ app.post("/api/declare-result", async (req, res) => {
   try {
     const { matchId, winnerTeam, secretKey } = req.body;
 
-    if (secretKey !== ADMIN_KEY) {
+    if (secretKey !== ADMIN_KEY)
       return res.status(403).json({ message: "Unauthorized ❌" });
-    }
 
     const bets = await Bet.find({ matchId });
 
     for (let bet of bets) {
       if (bet.team === winnerTeam) {
         const user = await User.findOne({ username: bet.username });
-        const winAmount = bet.amount * bet.odds;
-        user.balance += winAmount;
+        user.balance += bet.amount * bet.odds;
         await user.save();
         bet.result = "win";
       } else {
@@ -197,28 +193,9 @@ app.post("/api/declare-result", async (req, res) => {
 // ================= WITHDRAW REQUEST =================
 app.post("/api/withdraw-request", async (req, res) => {
   try {
-    const { username, amount, accountNumber, ifsc, name } = req.body;
-
-    const user = await User.findOne({ username });
-
-    if (!user) return res.status(404).json({ message: "User not found ❌" });
-
-    if (user.balance < amount) {
-      return res.status(400).json({ message: "Insufficient balance ❌" });
-    }
-
-    const withdraw = new Withdraw({
-      username,
-      amount,
-      accountNumber,
-      ifsc,
-      name
-    });
-
+    const withdraw = new Withdraw(req.body);
     await withdraw.save();
-
     res.json({ message: "Withdraw request sent ✅" });
-
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -229,16 +206,14 @@ app.post("/api/approve-withdraw", async (req, res) => {
   try {
     const { withdrawId, secretKey } = req.body;
 
-    if (secretKey !== ADMIN_KEY) {
+    if (secretKey !== ADMIN_KEY)
       return res.status(403).json({ message: "Unauthorized ❌" });
-    }
 
     const withdraw = await Withdraw.findById(withdrawId);
     const user = await User.findOne({ username: withdraw.username });
 
-    if (withdraw.status !== "pending") {
+    if (withdraw.status !== "pending")
       return res.status(400).json({ message: "Already processed ❌" });
-    }
 
     user.balance -= withdraw.amount;
     await user.save();
@@ -247,6 +222,48 @@ app.post("/api/approve-withdraw", async (req, res) => {
     await withdraw.save();
 
     res.json({ message: "Withdraw approved ✅" });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ================= 🔥 DEPOSIT REQUEST =================
+app.post("/api/deposit-request", async (req, res) => {
+  try {
+    const { username, amount, utr } = req.body;
+
+    const deposit = new Deposit({ username, amount, utr });
+    await deposit.save();
+
+    res.json({ message: "Deposit request sent ✅" });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ================= 🔥 APPROVE DEPOSIT =================
+app.post("/api/approve-deposit", async (req, res) => {
+  try {
+    const { depositId, secretKey } = req.body;
+
+    if (secretKey !== ADMIN_KEY)
+      return res.status(403).json({ message: "Unauthorized ❌" });
+
+    const deposit = await Deposit.findById(depositId);
+    const user = await User.findOne({ username: deposit.username });
+
+    if (deposit.status !== "pending")
+      return res.status(400).json({ message: "Already processed ❌" });
+
+    user.balance += deposit.amount;
+    await user.save();
+
+    deposit.status = "approved";
+    await deposit.save();
+
+    res.json({ message: "Deposit approved ✅" });
 
   } catch (err) {
     res.status(500).json({ error: err.message });
