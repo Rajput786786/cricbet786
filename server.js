@@ -1,5 +1,3 @@
-// FULL MERGED SAFE CODE (OLD + SESSION)
-
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -90,8 +88,12 @@ const SessionBet = mongoose.model("SessionBet", sessionBetSchema);
 
 // ================= REGISTER =================
 app.post("/api/register", async (req, res) => {
+  const exist = await User.findOne({ username: req.body.username });
+  if (exist) return res.json({ message: "User already exists ❌" });
+
   const user = new User(req.body);
   await user.save();
+
   res.json({ message: "User registered ✅" });
 });
 
@@ -99,6 +101,7 @@ app.post("/api/register", async (req, res) => {
 app.post("/api/login", async (req, res) => {
   const user = await User.findOne(req.body);
   if (!user) return res.status(400).json({ message: "Invalid ❌" });
+
   res.json({ message: "Login success ✅", user });
 });
 
@@ -117,6 +120,8 @@ app.get("/api/matches", async (req, res) => {
 // ================= PLACE BET =================
 app.post("/api/place-bet", async (req, res) => {
   const { username, matchId, team, amount } = req.body;
+
+  if (amount < 100) return res.json({ message: "Minimum 100 ❌" });
 
   const user = await User.findOne({ username });
   const match = await Match.findById(matchId);
@@ -159,6 +164,9 @@ app.post("/api/declare-result", async (req, res) => {
 
 // ================= DEPOSIT =================
 app.post("/api/deposit-request", async (req, res) => {
+  const exist = await Deposit.findOne({ utr: req.body.utr });
+  if (exist) return res.json({ message: "Duplicate UTR ❌" });
+
   await new Deposit(req.body).save();
   res.json({ message: "Deposit request sent ✅" });
 });
@@ -196,6 +204,9 @@ app.post("/api/approve-withdraw", async (req, res) => {
   const w = await Withdraw.findById(withdrawId);
   const u = await User.findOne({ username: w.username });
 
+  if (u.balance < w.amount)
+    return res.json({ message: "Insufficient balance ❌" });
+
   u.balance -= w.amount;
   await u.save();
 
@@ -221,8 +232,17 @@ app.get("/api/sessions", async (req, res) => {
 app.post("/api/session-bet", async (req, res) => {
   const { username, sessionId, type, amount } = req.body;
 
+  if (amount < 100)
+    return res.json({ message: "Minimum 100 ❌" });
+
   const user = await User.findOne({ username });
   const session = await Session.findById(sessionId);
+
+  if (!user || !session)
+    return res.json({ message: "Error ❌" });
+
+  if (user.balance < amount)
+    return res.json({ message: "Low balance ❌" });
 
   let rate = type === "yes" ? session.yesRate : session.noRate;
 
