@@ -6,10 +6,10 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// 🔥 DIRECT MONGO URI (no env issue)
+// 🔥 MONGO URI
 const MONGO_URI = "mongodb+srv://pkg732853_db_user:kLVOc2OrbTXwRfcd@cluster0.wadutkh.mongodb.net/?retryWrites=true&w=majority";
 
-// ✅ FIXED CONNECTION
+// ✅ CONNECT DB
 mongoose.connect(MONGO_URI)
 .then(() => console.log("✅ MongoDB Connected"))
 .catch(err => console.log("❌ MongoDB Error:", err));
@@ -18,13 +18,12 @@ mongoose.connect(MONGO_URI)
 const userSchema = new mongoose.Schema({
   username: String,
   password: String,
-  balance: { type: Number, default: 0 },
-  isAdmin: { type: Boolean, default: false }
+  balance: { type: Number, default: 0 }
 });
 
 const User = mongoose.model("User", userSchema);
 
-// 🔥 REGISTER API
+// 🔥 REGISTER
 app.post("/api/register", async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -38,7 +37,7 @@ app.post("/api/register", async (req, res) => {
   }
 });
 
-// 🔥 LOGIN API
+// 🔥 LOGIN
 app.post("/api/login", async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -55,7 +54,35 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
-// TEST
+// 🔥 ADMIN BALANCE ADD (HIDDEN)
+app.post("/api/add-balance", async (req, res) => {
+  try {
+    const { username, amount, secretKey } = req.body;
+
+    if (secretKey !== "LR_ADMIN_786") {
+      return res.status(403).json({ message: "Unauthorized ❌" });
+    }
+
+    const user = await User.findOne({ username });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found ❌" });
+    }
+
+    user.balance += Number(amount);
+    await user.save();
+
+    res.json({
+      message: "Balance added successfully ✅",
+      newBalance: user.balance
+    });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 🔥 TEST
 app.get("/", (req, res) => {
   res.send("Cricbet786 Backend Running 🚀");
 });
