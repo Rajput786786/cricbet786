@@ -135,7 +135,8 @@ app.get("/api/matches", verifyToken, async (req, res) => {
 
 // ================= BET =================
 app.post("/api/place-bet", verifyToken, async (req, res) => {
-  const { username, matchId, team, amount } = req.body;
+  const username = req.user.username;
+  const { matchId, team, amount } = req.body;
 
   if (amount < 100) return res.json({ message: "Minimum 100 ❌" });
 
@@ -179,10 +180,17 @@ app.post("/api/declare-result", verifyToken, async (req, res) => {
 
 // ================= DEPOSIT =================
 app.post("/api/deposit-request", verifyToken, async (req, res) => {
+  const username = req.user.username;
+
   const exist = await Deposit.findOne({ utr: req.body.utr });
   if (exist) return res.json({ message: "Duplicate UTR ❌" });
 
-  await new Deposit(req.body).save();
+  await new Deposit({
+    username,
+    amount: req.body.amount,
+    utr: req.body.utr
+  }).save();
+
   res.json({ message: "Deposit request sent ✅" });
 });
 
@@ -207,7 +215,16 @@ app.post("/api/approve-deposit", verifyToken, async (req, res) => {
 
 // ================= WITHDRAW =================
 app.post("/api/withdraw-request", verifyToken, async (req, res) => {
-  await new Withdraw(req.body).save();
+  const username = req.user.username;
+
+  await new Withdraw({
+    username,
+    amount: req.body.amount,
+    accountNumber: req.body.accountNumber,
+    ifsc: req.body.ifsc,
+    name: req.body.name
+  }).save();
+
   res.json({ message: "Withdraw request sent ✅" });
 });
 
@@ -244,7 +261,8 @@ app.get("/api/sessions", verifyToken, async (req, res) => {
 });
 
 app.post("/api/session-bet", verifyToken, async (req, res) => {
-  const { username, sessionId, type, amount } = req.body;
+  const username = req.user.username;
+  const { sessionId, type, amount } = req.body;
 
   if (amount < 100) return res.json({ message: "Minimum 100 ❌" });
 
