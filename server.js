@@ -2,6 +2,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 
 const app = express();
 app.use(cors());
@@ -10,11 +11,26 @@ app.use(express.json());
 // 🔐 ENV
 const MONGO_URI = process.env.MONGO_URI;
 const ADMIN_KEY = process.env.ADMIN_KEY || "LR_ADMIN_786";
+const JWT_SECRET = process.env.JWT_SECRET || "LR_SECRET_786";
 
 // ================= DB =================
 mongoose.connect(MONGO_URI)
 .then(() => console.log("✅ MongoDB Connected"))
 .catch(err => console.log("❌ MongoDB Error:", err));
+
+// ================= MIDDLEWARE =================
+function verifyToken(req, res, next) {
+  const token = req.headers["authorization"];
+  if (!token) return res.json({ message: "No token ❌" });
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch {
+    res.json({ message: "Invalid token ❌" });
+  }
+}
 
 // ================= MODELS =================
 const User = mongoose.model("User", new mongoose.Schema({
@@ -75,10 +91,10 @@ const SessionBet = mongoose.model("SessionBet", new mongoose.Schema({
 
 // ================= AUTH =================
 
-// REGISTER (WITH HASH)
+// REGISTER
 app.post("/api/register", async (req, res) => {
   const exist = await User.findOne({ username: req.body.username });
-  if (exist) return res.json({ message: "User already exists ❌" });
+  if (exist) return res.json({ message: "User exists ❌" });
 
   const hashedPassword = await bcrypt.hash(req.body.password, 10);
 
@@ -87,32 +103,38 @@ app.post("/api/register", async (req, res) => {
     password: hashedPassword
   }).save();
 
-  res.json({ message: "User registered ✅" });
+  res.json({ message: "Registered ✅" });
 });
 
-// LOGIN (COMPARE HASH)
+// LOGIN (TOKEN)
 app.post("/api/login", async (req, res) => {
   const user = await User.findOne({ username: req.body.username });
   if (!user) return res.json({ message: "Invalid ❌" });
 
-  const isMatch = await bcrypt.compare(req.body.password, user.password);
-  if (!isMatch) return res.json({ message: "Wrong password ❌" });
+  const match = await bcrypt.compare(req.body.password, user.password);
+  if (!match) return res.json({ message: "Wrong ❌" });
 
-  res.json({ message: "Login success ✅", user });
+  const token = jwt.sign(
+    { username: user.username },
+    JWT_SECRET,
+    { expiresIn: "7d" }
+  );
+
+  res.json({ message: "Login success ✅", token });
 });
 
 // ================= MATCH =================
-app.post("/api/create-match", async (req, res) => {
+app.post("/api/create-match", verifyToken, async (req, res) => {
   await new Match(req.body).save();
   res.json({ message: "Match created ✅" });
 });
 
-app.get("/api/matches", async (req, res) => {
+app.get("/api/matches", verifyToken, async (req, res) => {
   res.json(await Match.find());
 });
 
 // ================= BET =================
-app.post("/api/place-bet", async (req, res) => {
+app.post("/api/place-bet", verifyToken, async (req, res) => {
   const { username, matchId, team, amount } = req.body;
 
   if (amount < 100) return res.json({ message: "Minimum 100 ❌" });
@@ -134,7 +156,7 @@ app.post("/api/place-bet", async (req, res) => {
 });
 
 // ================= RESULT =================
-app.post("/api/declare-result", async (req, res) => {
+app.post("/api/declare-result", verifyToken, async (req, res) => {
   if (req.body.secretKey !== ADMIN_KEY)
     return res.json({ message: "Unauthorized ❌" });
 
@@ -156,7 +178,7 @@ app.post("/api/declare-result", async (req, res) => {
 });
 
 // ================= DEPOSIT =================
-app.post("/api/deposit-request", async (req, res) => {
+app.post("/api/deposit-request", verifyToken, async (req, res) => {
   const exist = await Deposit.findOne({ utr: req.body.utr });
   if (exist) return res.json({ message: "Duplicate UTR ❌" });
 
@@ -164,7 +186,7 @@ app.post("/api/deposit-request", async (req, res) => {
   res.json({ message: "Deposit request sent ✅" });
 });
 
-app.post("/api/approve-deposit", async (req, res) => {
+app.post("/api/approve-deposit", verifyToken, async (req, res) => {
   if (req.body.secretKey !== ADMIN_KEY)
     return res.json({ message: "Unauthorized ❌" });
 
@@ -184,12 +206,12 @@ app.post("/api/approve-deposit", async (req, res) => {
 });
 
 // ================= WITHDRAW =================
-app.post("/api/withdraw-request", async (req, res) => {
+app.post("/api/withdraw-request", verifyToken, async (req, res) => {
   await new Withdraw(req.body).save();
   res.json({ message: "Withdraw request sent ✅" });
 });
 
-app.post("/api/approve-withdraw", async (req, res) => {
+app.post("/api/approve-withdraw", verifyToken, async (req, res) => {
   if (req.body.secretKey !== ADMIN_KEY)
     return res.json({ message: "Unauthorized ❌" });
 
@@ -209,7 +231,7 @@ app.post("/api/approve-withdraw", async (req, res) => {
 });
 
 // ================= SESSION =================
-app.post("/api/create-session", async (req, res) => {
+app.post("/api/create-session", verifyToken, async (req, res) => {
   if (req.body.secretKey !== ADMIN_KEY)
     return res.json({ message: "Unauthorized ❌" });
 
@@ -217,11 +239,11 @@ app.post("/api/create-session", async (req, res) => {
   res.json({ message: "Session created ✅" });
 });
 
-app.get("/api/sessions", async (req, res) => {
+app.get("/api/sessions", verifyToken, async (req, res) => {
   res.json(await Session.find());
 });
 
-app.post("/api/session-bet", async (req, res) => {
+app.post("/api/session-bet", verifyToken, async (req, res) => {
   const { username, sessionId, type, amount } = req.body;
 
   if (amount < 100) return res.json({ message: "Minimum 100 ❌" });
@@ -242,7 +264,7 @@ app.post("/api/session-bet", async (req, res) => {
   res.json({ message: "Session bet placed ✅" });
 });
 
-app.post("/api/session-result", async (req, res) => {
+app.post("/api/session-result", verifyToken, async (req, res) => {
   if (req.body.secretKey !== ADMIN_KEY)
     return res.json({ message: "Unauthorized ❌" });
 
