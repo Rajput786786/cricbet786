@@ -213,6 +213,15 @@ app.post("/api/approve-deposit", verifyToken, async (req, res) => {
   res.json({ message: "Deposit approved ✅" });
 });
 
+// ================= ADMIN: GET DEPOSITS =================
+app.get("/api/deposits", verifyToken, async (req, res) => {
+  if (req.headers["adminkey"] !== ADMIN_KEY)
+    return res.json({ message: "Unauthorized ❌" });
+
+  const deposits = await Deposit.find().sort({ _id: -1 });
+  res.json(deposits);
+});
+
 // ================= WITHDRAW =================
 app.post("/api/withdraw-request", verifyToken, async (req, res) => {
   const username = req.user.username;
