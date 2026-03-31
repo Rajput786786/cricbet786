@@ -6,12 +6,13 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// 🔥 MONGO URI
 const MONGO_URI = "mongodb+srv://pkg732853_db_user:kLVOc2OrbTXwRfcd@cluster0.wadutkh.mongodb.net/?retryWrites=true&w=majority";
 
+// CONNECT
 mongoose.connect(MONGO_URI)
 .then(() => console.log("✅ MongoDB Connected"))
 .catch(err => console.log("❌ MongoDB Error:", err));
-
 
 // ================= USER =================
 const userSchema = new mongoose.Schema({
@@ -20,7 +21,6 @@ const userSchema = new mongoose.Schema({
   balance: { type: Number, default: 0 }
 });
 const User = mongoose.model("User", userSchema);
-
 
 // ================= MATCH =================
 const matchSchema = new mongoose.Schema({
@@ -32,7 +32,6 @@ const matchSchema = new mongoose.Schema({
 });
 const Match = mongoose.model("Match", matchSchema);
 
-
 // ================= BET =================
 const betSchema = new mongoose.Schema({
   username: String,
@@ -40,23 +39,21 @@ const betSchema = new mongoose.Schema({
   team: String,
   amount: Number,
   odds: Number,
-  status: { type: String, default: "pending" } // win / lose
+  status: { type: String, default: "pending" }
 });
 const Bet = mongoose.model("Bet", betSchema);
-
 
 // ================= REGISTER =================
 app.post("/api/register", async (req, res) => {
   try {
     const { username, password } = req.body;
-    const newUser = new User({ username, password });
-    await newUser.save();
+    const user = new User({ username, password });
+    await user.save();
     res.json({ message: "User registered ✅" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
-
 
 // ================= LOGIN =================
 app.post("/api/login", async (req, res) => {
@@ -64,14 +61,15 @@ app.post("/api/login", async (req, res) => {
     const { username, password } = req.body;
     const user = await User.findOne({ username, password });
 
-    if (!user) return res.status(400).json({ message: "Invalid ❌" });
+    if (!user) {
+      return res.status(400).json({ message: "Invalid credentials ❌" });
+    }
 
     res.json({ message: "Login success ✅", user });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
-
 
 // ================= ADD BALANCE =================
 app.post("/api/add-balance", async (req, res) => {
@@ -87,17 +85,16 @@ app.post("/api/add-balance", async (req, res) => {
     await user.save();
 
     res.json({ message: "Balance added ✅", newBalance: user.balance });
-
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-
 // ================= CREATE MATCH =================
 app.post("/api/create-match", async (req, res) => {
   try {
     const { teamA, teamB, oddsA, oddsB } = req.body;
+
     const match = new Match({ teamA, teamB, oddsA, oddsB });
     await match.save();
 
@@ -107,18 +104,21 @@ app.post("/api/create-match", async (req, res) => {
   }
 });
 
-
 // ================= GET MATCH =================
 app.get("/api/matches", async (req, res) => {
   const matches = await Match.find();
   res.json(matches);
 });
 
-
 // ================= PLACE BET =================
 app.post("/api/place-bet", async (req, res) => {
   try {
     const { username, matchId, team, amount } = req.body;
+
+    // 🔥 VALIDATE ID
+    if (!mongoose.Types.ObjectId.isValid(matchId)) {
+      return res.status(400).json({ message: "Invalid match ID ❌" });
+    }
 
     const user = await User.findOne({ username });
     const match = await Match.findById(matchId);
@@ -147,7 +147,6 @@ app.post("/api/place-bet", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
 
 // TEST
 app.get("/", (req, res) => {
