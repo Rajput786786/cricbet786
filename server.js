@@ -6,7 +6,6 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// 🔥 MONGO URI
 const MONGO_URI = "mongodb+srv://pkg732853_db_user:kLVOc2OrbTXwRfcd@cluster0.wadutkh.mongodb.net/?retryWrites=true&w=majority";
 
 mongoose.connect(MONGO_URI)
@@ -14,37 +13,45 @@ mongoose.connect(MONGO_URI)
 .catch(err => console.log("❌ MongoDB Error:", err));
 
 
-// ================= USER MODEL =================
+// ================= USER =================
 const userSchema = new mongoose.Schema({
   username: String,
   password: String,
   balance: { type: Number, default: 0 }
 });
-
 const User = mongoose.model("User", userSchema);
 
 
-// ================= MATCH MODEL =================
+// ================= MATCH =================
 const matchSchema = new mongoose.Schema({
   teamA: String,
   teamB: String,
   oddsA: Number,
   oddsB: Number,
-  status: { type: String, default: "live" } // live / ended
+  status: { type: String, default: "live" }
 });
-
 const Match = mongoose.model("Match", matchSchema);
+
+
+// ================= BET =================
+const betSchema = new mongoose.Schema({
+  username: String,
+  matchId: String,
+  team: String,
+  amount: Number,
+  odds: Number,
+  status: { type: String, default: "pending" } // win / lose
+});
+const Bet = mongoose.model("Bet", betSchema);
 
 
 // ================= REGISTER =================
 app.post("/api/register", async (req, res) => {
   try {
     const { username, password } = req.body;
-
     const newUser = new User({ username, password });
     await newUser.save();
-
-    res.json({ message: "User registered successfully ✅" });
+    res.json({ message: "User registered ✅" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -55,12 +62,9 @@ app.post("/api/register", async (req, res) => {
 app.post("/api/login", async (req, res) => {
   try {
     const { username, password } = req.body;
-
     const user = await User.findOne({ username, password });
 
-    if (!user) {
-      return res.status(400).json({ message: "Invalid credentials ❌" });
-    }
+    if (!user) return res.status(400).json({ message: "Invalid ❌" });
 
     res.json({ message: "Login success ✅", user });
   } catch (err) {
@@ -79,15 +83,10 @@ app.post("/api/add-balance", async (req, res) => {
     }
 
     const user = await User.findOne({ username });
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found ❌" });
-    }
-
     user.balance += amount;
     await user.save();
 
-    res.json({ message: "Balance added successfully ✅", newBalance: user.balance });
+    res.json({ message: "Balance added ✅", newBalance: user.balance });
 
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -99,23 +98,51 @@ app.post("/api/add-balance", async (req, res) => {
 app.post("/api/create-match", async (req, res) => {
   try {
     const { teamA, teamB, oddsA, oddsB } = req.body;
-
     const match = new Match({ teamA, teamB, oddsA, oddsB });
     await match.save();
 
     res.json({ message: "Match created ✅", match });
-
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
 
-// ================= GET MATCHES =================
+// ================= GET MATCH =================
 app.get("/api/matches", async (req, res) => {
+  const matches = await Match.find();
+  res.json(matches);
+});
+
+
+// ================= PLACE BET =================
+app.post("/api/place-bet", async (req, res) => {
   try {
-    const matches = await Match.find();
-    res.json(matches);
+    const { username, matchId, team, amount } = req.body;
+
+    const user = await User.findOne({ username });
+    const match = await Match.findById(matchId);
+
+    if (!user) return res.status(404).json({ message: "User not found ❌" });
+    if (!match) return res.status(404).json({ message: "Match not found ❌" });
+
+    if (user.balance < amount) {
+      return res.status(400).json({ message: "Insufficient balance ❌" });
+    }
+
+    let odds = team === match.teamA ? match.oddsA : match.oddsB;
+
+    user.balance -= amount;
+    await user.save();
+
+    const bet = new Bet({ username, matchId, team, amount, odds });
+    await bet.save();
+
+    res.json({
+      message: "Bet placed ✅",
+      remainingBalance: user.balance
+    });
+
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
