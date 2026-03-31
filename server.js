@@ -9,12 +9,12 @@ app.use(express.json());
 // 🔥 MONGO URI
 const MONGO_URI = "mongodb+srv://pkg732853_db_user:kLVOc2OrbTXwRfcd@cluster0.wadutkh.mongodb.net/?retryWrites=true&w=majority";
 
-// ✅ CONNECT DB
 mongoose.connect(MONGO_URI)
 .then(() => console.log("✅ MongoDB Connected"))
 .catch(err => console.log("❌ MongoDB Error:", err));
 
-// 🔥 USER MODEL
+
+// ================= USER MODEL =================
 const userSchema = new mongoose.Schema({
   username: String,
   password: String,
@@ -23,7 +23,20 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.model("User", userSchema);
 
-// 🔥 REGISTER
+
+// ================= MATCH MODEL =================
+const matchSchema = new mongoose.Schema({
+  teamA: String,
+  teamB: String,
+  oddsA: Number,
+  oddsB: Number,
+  status: { type: String, default: "live" } // live / ended
+});
+
+const Match = mongoose.model("Match", matchSchema);
+
+
+// ================= REGISTER =================
 app.post("/api/register", async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -37,7 +50,8 @@ app.post("/api/register", async (req, res) => {
   }
 });
 
-// 🔥 LOGIN
+
+// ================= LOGIN =================
 app.post("/api/login", async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -54,7 +68,8 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
-// 🔥 ADMIN BALANCE ADD (HIDDEN)
+
+// ================= ADD BALANCE =================
 app.post("/api/add-balance", async (req, res) => {
   try {
     const { username, amount, secretKey } = req.body;
@@ -69,20 +84,45 @@ app.post("/api/add-balance", async (req, res) => {
       return res.status(404).json({ message: "User not found ❌" });
     }
 
-    user.balance += Number(amount);
+    user.balance += amount;
     await user.save();
 
-    res.json({
-      message: "Balance added successfully ✅",
-      newBalance: user.balance
-    });
+    res.json({ message: "Balance added successfully ✅", newBalance: user.balance });
 
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// 🔥 TEST
+
+// ================= CREATE MATCH =================
+app.post("/api/create-match", async (req, res) => {
+  try {
+    const { teamA, teamB, oddsA, oddsB } = req.body;
+
+    const match = new Match({ teamA, teamB, oddsA, oddsB });
+    await match.save();
+
+    res.json({ message: "Match created ✅", match });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+// ================= GET MATCHES =================
+app.get("/api/matches", async (req, res) => {
+  try {
+    const matches = await Match.find();
+    res.json(matches);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+// TEST
 app.get("/", (req, res) => {
   res.send("Cricbet786 Backend Running 🚀");
 });
