@@ -6,118 +6,99 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// 🔥 MONGO URI
-const MONGO_URI = "mongodb+srv://pkg732853_db_user:kLVOc2OrbTXwRfcd@cluster0.wadutkh.mongodb.net/?retryWrites=true&w=majority";
+// 🔐 ENV
+const MONGO_URI = process.env.MONGO_URI;
+const ADMIN_KEY = process.env.ADMIN_KEY || "LR_ADMIN_786";
 
+// ================= DB =================
 mongoose.connect(MONGO_URI)
 .then(() => console.log("✅ MongoDB Connected"))
 .catch(err => console.log("❌ MongoDB Error:", err));
 
-// 🔐 ADMIN KEY
-const ADMIN_KEY = "LR_ADMIN_786";
-
-// ================= USER =================
-const userSchema = new mongoose.Schema({
-  username: String,
+// ================= MODELS =================
+const User = mongoose.model("User", new mongoose.Schema({
+  username: { type: String, unique: true },
   password: String,
   balance: { type: Number, default: 0 }
-});
-const User = mongoose.model("User", userSchema);
+}));
 
-// ================= MATCH =================
-const matchSchema = new mongoose.Schema({
+const Match = mongoose.model("Match", new mongoose.Schema({
   teamA: String,
   teamB: String,
   oddsA: Number,
   oddsB: Number,
   status: { type: String, default: "live" }
-});
-const Match = mongoose.model("Match", matchSchema);
+}));
 
-// ================= BET =================
-const betSchema = new mongoose.Schema({
+const Bet = mongoose.model("Bet", new mongoose.Schema({
   username: String,
   matchId: String,
   team: String,
   amount: Number,
   odds: Number,
   result: { type: String, default: "pending" }
-});
-const Bet = mongoose.model("Bet", betSchema);
+}));
 
-// ================= WITHDRAW =================
-const withdrawSchema = new mongoose.Schema({
+const Deposit = mongoose.model("Deposit", new mongoose.Schema({
+  username: String,
+  amount: Number,
+  utr: String,
+  status: { type: String, default: "pending" }
+}));
+
+const Withdraw = mongoose.model("Withdraw", new mongoose.Schema({
   username: String,
   amount: Number,
   accountNumber: String,
   ifsc: String,
   name: String,
   status: { type: String, default: "pending" }
-});
-const Withdraw = mongoose.model("Withdraw", withdrawSchema);
+}));
 
-// ================= DEPOSIT =================
-const depositSchema = new mongoose.Schema({
-  username: String,
-  amount: Number,
-  utr: String,
-  status: { type: String, default: "pending" }
-});
-const Deposit = mongoose.model("Deposit", depositSchema);
-
-// ================= SESSION =================
-const sessionSchema = new mongoose.Schema({
+const Session = mongoose.model("Session", new mongoose.Schema({
   question: String,
   yesRate: Number,
   noRate: Number,
   status: { type: String, default: "active" },
   result: { type: String, default: "pending" }
-});
-const Session = mongoose.model("Session", sessionSchema);
+}));
 
-// ================= SESSION BET =================
-const sessionBetSchema = new mongoose.Schema({
+const SessionBet = mongoose.model("SessionBet", new mongoose.Schema({
   username: String,
   sessionId: String,
   type: String,
   amount: Number,
   rate: Number,
   result: { type: String, default: "pending" }
-});
-const SessionBet = mongoose.model("SessionBet", sessionBetSchema);
+}));
 
-// ================= REGISTER =================
+// ================= AUTH =================
 app.post("/api/register", async (req, res) => {
   const exist = await User.findOne({ username: req.body.username });
   if (exist) return res.json({ message: "User already exists ❌" });
 
-  const user = new User(req.body);
-  await user.save();
-
+  await new User(req.body).save();
   res.json({ message: "User registered ✅" });
 });
 
-// ================= LOGIN =================
 app.post("/api/login", async (req, res) => {
   const user = await User.findOne(req.body);
-  if (!user) return res.status(400).json({ message: "Invalid ❌" });
+  if (!user) return res.json({ message: "Invalid ❌" });
 
   res.json({ message: "Login success ✅", user });
 });
 
-// ================= CREATE MATCH =================
+// ================= MATCH =================
 app.post("/api/create-match", async (req, res) => {
-  const match = new Match(req.body);
-  await match.save();
-  res.json({ message: "Match created ✅", match });
+  await new Match(req.body).save();
+  res.json({ message: "Match created ✅" });
 });
 
-// ================= GET MATCH =================
 app.get("/api/matches", async (req, res) => {
   res.json(await Match.find());
 });
 
-// ================= PLACE BET =================
+// ================= BET =================
 app.post("/api/place-bet", async (req, res) => {
   const { username, matchId, team, amount } = req.body;
 
@@ -127,7 +108,6 @@ app.post("/api/place-bet", async (req, res) => {
   const match = await Match.findById(matchId);
 
   if (!user || !match) return res.json({ message: "Error ❌" });
-
   if (user.balance < amount) return res.json({ message: "Low balance ❌" });
 
   let odds = team === match.teamA ? match.oddsA : match.oddsB;
@@ -142,21 +122,21 @@ app.post("/api/place-bet", async (req, res) => {
 
 // ================= RESULT =================
 app.post("/api/declare-result", async (req, res) => {
-  const { matchId, winnerTeam, secretKey } = req.body;
+  if (req.body.secretKey !== ADMIN_KEY)
+    return res.json({ message: "Unauthorized ❌" });
 
-  if (secretKey !== ADMIN_KEY) return res.json({ message: "Unauthorized ❌" });
+  const bets = await Bet.find({ matchId: req.body.matchId });
 
-  const bets = await Bet.find({ matchId });
+  for (let b of bets) {
+    const u = await User.findOne({ username: b.username });
 
-  for (let bet of bets) {
-    if (bet.team === winnerTeam) {
-      const user = await User.findOne({ username: bet.username });
-      user.balance += bet.amount * bet.odds;
-      await user.save();
-      bet.result = "win";
-    } else bet.result = "lose";
+    if (b.team === req.body.winnerTeam) {
+      u.balance += b.amount * b.odds;
+      b.result = "win";
+    } else b.result = "lose";
 
-    await bet.save();
+    await u.save();
+    await b.save();
   }
 
   res.json({ message: "Result declared ✅" });
@@ -172,19 +152,19 @@ app.post("/api/deposit-request", async (req, res) => {
 });
 
 app.post("/api/approve-deposit", async (req, res) => {
-  const { depositId, secretKey } = req.body;
+  if (req.body.secretKey !== ADMIN_KEY)
+    return res.json({ message: "Unauthorized ❌" });
 
-  if (secretKey !== ADMIN_KEY) return res.json({ message: "Unauthorized ❌" });
-
-  const d = await Deposit.findById(depositId);
+  const d = await Deposit.findById(req.body.depositId);
   const u = await User.findOne({ username: d.username });
 
-  if (d.status !== "pending") return res.json({ message: "Already ❌" });
+  if (d.status !== "pending")
+    return res.json({ message: "Already ❌" });
 
   u.balance += d.amount;
-  await u.save();
-
   d.status = "approved";
+
+  await u.save();
   await d.save();
 
   res.json({ message: "Deposit approved ✅" });
@@ -197,20 +177,19 @@ app.post("/api/withdraw-request", async (req, res) => {
 });
 
 app.post("/api/approve-withdraw", async (req, res) => {
-  const { withdrawId, secretKey } = req.body;
+  if (req.body.secretKey !== ADMIN_KEY)
+    return res.json({ message: "Unauthorized ❌" });
 
-  if (secretKey !== ADMIN_KEY) return res.json({ message: "Unauthorized ❌" });
-
-  const w = await Withdraw.findById(withdrawId);
+  const w = await Withdraw.findById(req.body.withdrawId);
   const u = await User.findOne({ username: w.username });
 
   if (u.balance < w.amount)
     return res.json({ message: "Insufficient balance ❌" });
 
   u.balance -= w.amount;
-  await u.save();
-
   w.status = "approved";
+
+  await u.save();
   await w.save();
 
   res.json({ message: "Withdraw approved ✅" });
@@ -232,17 +211,13 @@ app.get("/api/sessions", async (req, res) => {
 app.post("/api/session-bet", async (req, res) => {
   const { username, sessionId, type, amount } = req.body;
 
-  if (amount < 100)
-    return res.json({ message: "Minimum 100 ❌" });
+  if (amount < 100) return res.json({ message: "Minimum 100 ❌" });
 
   const user = await User.findOne({ username });
   const session = await Session.findById(sessionId);
 
-  if (!user || !session)
-    return res.json({ message: "Error ❌" });
-
-  if (user.balance < amount)
-    return res.json({ message: "Low balance ❌" });
+  if (!user || !session) return res.json({ message: "Error ❌" });
+  if (user.balance < amount) return res.json({ message: "Low balance ❌" });
 
   let rate = type === "yes" ? session.yesRate : session.noRate;
 
