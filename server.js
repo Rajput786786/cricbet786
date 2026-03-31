@@ -256,6 +256,15 @@ app.post("/api/approve-withdraw", verifyToken, async (req, res) => {
   res.json({ message: "Withdraw approved ✅" });
 });
 
+// ================= ADMIN: GET WITHDRAWS =================
+app.get("/api/withdraws", verifyToken, async (req, res) => {
+  if (req.headers["adminkey"] !== ADMIN_KEY)
+    return res.json({ message: "Unauthorized ❌" });
+
+  const withdraws = await Withdraw.find().sort({ _id: -1 });
+  res.json(withdraws);
+});
+
 // ================= SESSION =================
 app.post("/api/create-session", verifyToken, async (req, res) => {
   if (req.body.secretKey !== ADMIN_KEY)
