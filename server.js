@@ -44,8 +44,8 @@ const Bet = mongoose.model("Bet", betSchema);
 // ================= REGISTER =================
 app.post("/api/register", async (req, res) => {
   const { username, password } = req.body;
-  const newUser = new User({ username, password });
-  await newUser.save();
+  const user = new User({ username, password });
+  await user.save();
   res.json({ message: "User registered ✅" });
 });
 
@@ -63,9 +63,11 @@ app.post("/api/login", async (req, res) => {
 app.post("/api/add-balance", async (req, res) => {
   const { username, amount, secretKey } = req.body;
 
-  if (secretKey !== "LR_ADMIN_786") {
+  if (secretKey !== "LR_ADMIN_786")
     return res.status(403).json({ message: "Unauthorized ❌" });
-  }
+
+  if (amount < 200)
+    return res.status(400).json({ message: "Minimum deposit 200 ❌" });
 
   const user = await User.findOne({ username });
   user.balance += amount;
@@ -92,55 +94,60 @@ app.get("/api/matches", async (req, res) => {
 
 // ================= PLACE BET =================
 app.post("/api/place-bet", async (req, res) => {
-  const { username, matchId, team, amount } = req.body;
+  try {
+    const { username, matchId, team, amount } = req.body;
 
-  if (!mongoose.Types.ObjectId.isValid(matchId)) {
-    return res.status(400).json({ message: "Invalid match ID ❌" });
+    if (amount < 100)
+      return res.status(400).json({ message: "Minimum bet 100 ❌" });
+
+    if (!mongoose.Types.ObjectId.isValid(matchId))
+      return res.status(400).json({ message: "Invalid match ID ❌" });
+
+    const user = await User.findOne({ username });
+    const match = await Match.findById(matchId);
+
+    if (!user) return res.status(404).json({ message: "User not found ❌" });
+    if (!match) return res.status(404).json({ message: "Match not found ❌" });
+
+    if (user.balance < amount)
+      return res.status(400).json({ message: "Low balance ❌" });
+
+    let odds = team === match.teamA ? match.oddsA : match.oddsB;
+
+    user.balance -= amount;
+    await user.save();
+
+    const bet = new Bet({ username, matchId, team, amount, odds });
+    await bet.save();
+
+    res.json({ message: "Bet placed ✅", remainingBalance: user.balance });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-
-  const user = await User.findOne({ username });
-  const match = await Match.findById(matchId);
-
-  if (!user) return res.status(404).json({ message: "User not found ❌" });
-  if (!match) return res.status(404).json({ message: "Match not found ❌" });
-
-  if (user.balance < amount) {
-    return res.status(400).json({ message: "Insufficient balance ❌" });
-  }
-
-  let odds = team === match.teamA ? match.oddsA : match.oddsB;
-
-  user.balance -= amount;
-  await user.save();
-
-  const bet = new Bet({ username, matchId, team, amount, odds });
-  await bet.save();
-
-  res.json({ message: "Bet placed ✅", remainingBalance: user.balance });
 });
 
-// ================= RESULT SYSTEM 🔥 =================
+// ================= RESULT DECLARE =================
 app.post("/api/declare-result", async (req, res) => {
   const { matchId, winnerTeam, secretKey } = req.body;
 
-  if (secretKey !== "LR_ADMIN_786") {
+  if (secretKey !== "LR_ADMIN_786")
     return res.status(403).json({ message: "Unauthorized ❌" });
-  }
 
-  const bets = await Bet.find({ matchId, status: "pending" });
+  const bets = await Bet.find({ matchId });
 
   for (let bet of bets) {
-    const user = await User.findOne({ username: bet.username });
-
     if (bet.team === winnerTeam) {
       const winAmount = bet.amount * bet.odds;
+
+      const user = await User.findOne({ username: bet.username });
       user.balance += winAmount;
+      await user.save();
+
       bet.status = "win";
     } else {
       bet.status = "lose";
     }
-
-    await user.save();
     await bet.save();
   }
 
@@ -153,6 +160,4 @@ app.get("/", (req, res) => {
 });
 
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log("🚀 Server running"));
