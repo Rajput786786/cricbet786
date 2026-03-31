@@ -6,10 +6,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// 🔥 MONGO URI
 const MONGO_URI = "mongodb+srv://pkg732853_db_user:kLVOc2OrbTXwRfcd@cluster0.wadutkh.mongodb.net/?retryWrites=true&w=majority";
 
-// CONNECT
 mongoose.connect(MONGO_URI)
 .then(() => console.log("✅ MongoDB Connected"))
 .catch(err => console.log("❌ MongoDB Error:", err));
@@ -45,63 +43,45 @@ const Bet = mongoose.model("Bet", betSchema);
 
 // ================= REGISTER =================
 app.post("/api/register", async (req, res) => {
-  try {
-    const { username, password } = req.body;
-    const user = new User({ username, password });
-    await user.save();
-    res.json({ message: "User registered ✅" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  const { username, password } = req.body;
+  const newUser = new User({ username, password });
+  await newUser.save();
+  res.json({ message: "User registered ✅" });
 });
 
 // ================= LOGIN =================
 app.post("/api/login", async (req, res) => {
-  try {
-    const { username, password } = req.body;
-    const user = await User.findOne({ username, password });
+  const { username, password } = req.body;
+  const user = await User.findOne({ username, password });
 
-    if (!user) {
-      return res.status(400).json({ message: "Invalid credentials ❌" });
-    }
+  if (!user) return res.status(400).json({ message: "Invalid ❌" });
 
-    res.json({ message: "Login success ✅", user });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  res.json({ message: "Login success ✅", user });
 });
 
 // ================= ADD BALANCE =================
 app.post("/api/add-balance", async (req, res) => {
-  try {
-    const { username, amount, secretKey } = req.body;
+  const { username, amount, secretKey } = req.body;
 
-    if (secretKey !== "LR_ADMIN_786") {
-      return res.status(403).json({ message: "Unauthorized ❌" });
-    }
-
-    const user = await User.findOne({ username });
-    user.balance += amount;
-    await user.save();
-
-    res.json({ message: "Balance added ✅", newBalance: user.balance });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  if (secretKey !== "LR_ADMIN_786") {
+    return res.status(403).json({ message: "Unauthorized ❌" });
   }
+
+  const user = await User.findOne({ username });
+  user.balance += amount;
+  await user.save();
+
+  res.json({ message: "Balance added ✅", newBalance: user.balance });
 });
 
 // ================= CREATE MATCH =================
 app.post("/api/create-match", async (req, res) => {
-  try {
-    const { teamA, teamB, oddsA, oddsB } = req.body;
+  const { teamA, teamB, oddsA, oddsB } = req.body;
 
-    const match = new Match({ teamA, teamB, oddsA, oddsB });
-    await match.save();
+  const match = new Match({ teamA, teamB, oddsA, oddsB });
+  await match.save();
 
-    res.json({ message: "Match created ✅", match });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  res.json({ message: "Match created ✅", match });
 });
 
 // ================= GET MATCH =================
@@ -112,43 +92,62 @@ app.get("/api/matches", async (req, res) => {
 
 // ================= PLACE BET =================
 app.post("/api/place-bet", async (req, res) => {
-  try {
-    const { username, matchId, team, amount } = req.body;
+  const { username, matchId, team, amount } = req.body;
 
-    // 🔥 VALIDATE ID
-    if (!mongoose.Types.ObjectId.isValid(matchId)) {
-      return res.status(400).json({ message: "Invalid match ID ❌" });
-    }
-
-    const user = await User.findOne({ username });
-    const match = await Match.findById(matchId);
-
-    if (!user) return res.status(404).json({ message: "User not found ❌" });
-    if (!match) return res.status(404).json({ message: "Match not found ❌" });
-
-    if (user.balance < amount) {
-      return res.status(400).json({ message: "Insufficient balance ❌" });
-    }
-
-    let odds = team === match.teamA ? match.oddsA : match.oddsB;
-
-    user.balance -= amount;
-    await user.save();
-
-    const bet = new Bet({ username, matchId, team, amount, odds });
-    await bet.save();
-
-    res.json({
-      message: "Bet placed ✅",
-      remainingBalance: user.balance
-    });
-
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  if (!mongoose.Types.ObjectId.isValid(matchId)) {
+    return res.status(400).json({ message: "Invalid match ID ❌" });
   }
+
+  const user = await User.findOne({ username });
+  const match = await Match.findById(matchId);
+
+  if (!user) return res.status(404).json({ message: "User not found ❌" });
+  if (!match) return res.status(404).json({ message: "Match not found ❌" });
+
+  if (user.balance < amount) {
+    return res.status(400).json({ message: "Insufficient balance ❌" });
+  }
+
+  let odds = team === match.teamA ? match.oddsA : match.oddsB;
+
+  user.balance -= amount;
+  await user.save();
+
+  const bet = new Bet({ username, matchId, team, amount, odds });
+  await bet.save();
+
+  res.json({ message: "Bet placed ✅", remainingBalance: user.balance });
 });
 
-// TEST
+// ================= RESULT SYSTEM 🔥 =================
+app.post("/api/declare-result", async (req, res) => {
+  const { matchId, winnerTeam, secretKey } = req.body;
+
+  if (secretKey !== "LR_ADMIN_786") {
+    return res.status(403).json({ message: "Unauthorized ❌" });
+  }
+
+  const bets = await Bet.find({ matchId, status: "pending" });
+
+  for (let bet of bets) {
+    const user = await User.findOne({ username: bet.username });
+
+    if (bet.team === winnerTeam) {
+      const winAmount = bet.amount * bet.odds;
+      user.balance += winAmount;
+      bet.status = "win";
+    } else {
+      bet.status = "lose";
+    }
+
+    await user.save();
+    await bet.save();
+  }
+
+  res.json({ message: "Result declared ✅" });
+});
+
+// ================= TEST =================
 app.get("/", (req, res) => {
   res.send("Cricbet786 Backend Running 🚀");
 });
