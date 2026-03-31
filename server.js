@@ -224,4 +224,48 @@ app.get("/api/sessions", async (req, res) => {
 app.post("/api/session-bet", async (req, res) => {
   const { username, sessionId, type, amount } = req.body;
 
-  if (
+  if (amount < 100) return res.json({ message: "Minimum 100 ❌" });
+
+  const user = await User.findOne({ username });
+  const session = await Session.findById(sessionId);
+
+  if (!user || !session) return res.json({ message: "Error ❌" });
+  if (user.balance < amount) return res.json({ message: "Low balance ❌" });
+
+  let rate = type === "yes" ? session.yesRate : session.noRate;
+
+  user.balance -= amount;
+  await user.save();
+
+  await new SessionBet({ username, sessionId, type, amount, rate }).save();
+
+  res.json({ message: "Session bet placed ✅" });
+});
+
+app.post("/api/session-result", async (req, res) => {
+  if (req.body.secretKey !== ADMIN_KEY)
+    return res.json({ message: "Unauthorized ❌" });
+
+  const bets = await SessionBet.find({ sessionId: req.body.sessionId });
+
+  for (let b of bets) {
+    const u = await User.findOne({ username: b.username });
+
+    if (b.type === req.body.result) {
+      u.balance += b.amount + (b.amount * b.rate) / 100;
+      b.result = "win";
+    } else b.result = "lose";
+
+    await u.save();
+    await b.save();
+  }
+
+  res.json({ message: "Session result declared ✅" });
+});
+
+// ================= SERVER =================
+app.get("/", (req, res) => {
+  res.send("Cricbet786 Running 🚀");
+});
+
+app.listen(10000, () => console.log("🚀 Server Running"));
