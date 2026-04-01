@@ -32,11 +32,12 @@ function verifyToken(req, res, next) {
   }
 }
 
-// ================= MODELS =================
+// 🔥 UPDATED USER MODEL (Expose Balance Added)
 const User = mongoose.model("User", new mongoose.Schema({
   username: { type: String, unique: true },
   password: String,
-  balance: { type: Number, default: 0 }
+  balance: { type: Number, default: 0 },
+  exposeBalance: { type: Number, default: 0 }
 }));
 
 const Match = mongoose.model("Match", new mongoose.Schema({
@@ -149,6 +150,7 @@ app.post("/api/place-bet", verifyToken, async (req, res) => {
   let odds = team === match.teamA ? match.oddsA : match.oddsB;
 
   user.balance -= amount;
+  user.exposeBalance += amount;
   await user.save();
 
   await new Bet({ username, matchId, team, amount, odds }).save();
@@ -167,7 +169,7 @@ app.post("/api/declare-result", verifyToken, async (req, res) => {
     const u = await User.findOne({ username: b.username });
 
     if (b.team === req.body.winnerTeam) {
-      u.balance += b.amount * b.odds;
+      u.exposeBalance -= b.amount;
       b.result = "win";
     } else b.result = "lose";
 
