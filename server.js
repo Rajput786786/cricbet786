@@ -148,13 +148,20 @@ app.post("/api/place-bet", verifyToken, async (req, res) => {
   const user = await User.findOne({ username });
   const match = await Match.findById(matchId);
 
-  if (!user || !match) return res.json({ message: "Error ❌" });
-  // ❗ match status check (NEW)
+if (!user || !match) return res.json({ message: "Error ❌" });
+
+// ✅ STEP 1: Match exist + safe check
+if (!match) {
+  return res.json({ message: "Match not found ❌" });
+}
+
+// ✅ STEP 2: Match closed check
 if (match.status !== "live") {
   return res.json({ message: "Match closed ❌" });
 }
-  // 🔴 Suspend check (NEW)
-if (match.suspended) {
+
+// ✅ STEP 3: Suspend check
+if (match.suspended === true) {
   return res.json({ message: "Market Suspended (" + match.suspendReason + ") ❌" });
 }
   if (user.balance < amount) return res.json({ message: "Low balance ❌" });
