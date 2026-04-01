@@ -155,9 +155,11 @@ app.post("/api/place-bet", verifyToken, async (req, res) => {
   const username = req.user.username;
   const { matchId, team, amount, odds: userOdds } = req.body;
 
-  if (!amount || amount < 100 || amount > 100000)
+if (!amount || amount < 100 || amount > 100000)
   return res.json({ message: "Invalid amount ❌" });
-
+if (!isValidNumber(amount)) {
+  return res.json({ message: "Invalid input ❌" });
+}
   const user = await User.findOne({ username });
   const match = await Match.findById(matchId);
   // 🚨 TEAM VALIDATION
