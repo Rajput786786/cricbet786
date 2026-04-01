@@ -273,6 +273,21 @@ app.get("/api/withdraws", verifyToken, async (req, res) => {
   res.json(withdraws);
 });
 
+// ================= USER WALLET =================
+
+// 🔥 Get current user wallet (balance + expose)
+app.get("/api/me", verifyToken, async (req, res) => {
+  const user = await User.findOne({ username: req.user.username });
+
+  if (!user) return res.json({ message: "User not found ❌" });
+
+  res.json({
+    username: user.username,
+    balance: user.balance,
+    exposeBalance: user.exposeBalance
+  });
+});
+
 // ================= SESSION =================
 app.post("/api/create-session", verifyToken, async (req, res) => {
   if (req.body.secretKey !== ADMIN_KEY)
