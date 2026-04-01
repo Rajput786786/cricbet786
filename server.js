@@ -143,7 +143,7 @@ app.get("/api/matches", verifyToken, async (req, res) => {
 // ================= BET =================
 app.post("/api/place-bet", verifyToken, async (req, res) => {
   const username = req.user.username;
-  const { matchId, team, amount } = req.body;
+  const { matchId, team, amount, odds: userOdds } = req.body;
 
   if (amount < 100) return res.json({ message: "Minimum 100 ❌" });
 
