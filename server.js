@@ -427,11 +427,11 @@ app.post("/api/ball-end", verifyToken, async (req, res) => {
 
   const match = await Match.findById(req.body.matchId);
 
-  match.suspended = false;
-  match.suspendReason = "";
-
-  await match.save();
-
+  // 🟢 Resume all sessions
+await Session.updateMany(
+  { status: "active" },
+  { suspended: false }
+);
   res.json({ message: "Ball ended → Live 🟢" });
 });
 
@@ -457,10 +457,11 @@ app.post("/api/review-end", verifyToken, async (req, res) => {
 
   const match = await Match.findById(req.body.matchId);
 
-  match.suspended = false;
-  match.suspendReason = "";
-
-  await match.save();
+  // 🔴 ONLY SESSION SUSPEND (OD चालू रहेगा)
+await Session.updateMany(
+  { status: "active" },
+  { suspended: true }
+);
 
   res.json({ message: "Review end → Live 🟢" });
 });
