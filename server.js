@@ -288,6 +288,40 @@ app.get("/api/me", verifyToken, async (req, res) => {
   });
 });
 
+// ================= BET HISTORY =================
+
+// 🔥 Get user bet history
+app.get("/api/my-bets", verifyToken, async (req, res) => {
+  const username = req.user.username;
+
+  const bets = await Bet.find({ username })
+    .sort({ createdAt: -1 });
+
+  const formatted = bets.map(b => {
+    let credit = 0;
+    let debit = 0;
+
+    if (b.result === "win") {
+      credit = b.amount * b.odds;
+    } else if (b.result === "lose") {
+      debit = b.amount;
+    }
+
+    return {
+      matchId: b.matchId,
+      team: b.team,
+      amount: b.amount,
+      odds: b.odds,
+      result: b.result,
+      credit,
+      debit,
+      date: b.createdAt
+    };
+  });
+
+  res.json(formatted);
+});
+
 // ================= SESSION =================
 app.post("/api/create-session", verifyToken, async (req, res) => {
   if (req.body.secretKey !== ADMIN_KEY)
