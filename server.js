@@ -201,7 +201,7 @@ if (userOdds && userOdds !== odds) {
 
 // ================= RESULT =================
 app.post("/api/declare-result", verifyToken, async (req, res) => {
-  if (req.body.secretKey !== ADMIN_KEY)
+  if (!req.isAdmin)
     return res.json({ message: "Unauthorized ❌" });
 
   // 🔥 GET MATCH
@@ -249,7 +249,7 @@ app.post("/api/deposit-request", verifyToken, async (req, res) => {
 });
 
 app.post("/api/approve-deposit", verifyToken, async (req, res) => {
-  if (req.body.secretKey !== ADMIN_KEY)
+  if (!req.isAdmin)
     return res.json({ message: "Unauthorized ❌" });
 
   const d = await Deposit.findById(req.body.depositId);
@@ -292,7 +292,7 @@ app.post("/api/withdraw-request", verifyToken, async (req, res) => {
 });
 
 app.post("/api/approve-withdraw", verifyToken, async (req, res) => {
-  if (req.body.secretKey !== ADMIN_KEY)
+  if (!req.isAdmin)
     return res.json({ message: "Unauthorized ❌" });
 
   const w = await Withdraw.findById(req.body.withdrawId);
@@ -433,7 +433,7 @@ app.get("/api/statement", verifyToken, async (req, res) => {
 
 // 🔴 Ball start → suspend
 app.post("/api/ball-start", verifyToken, async (req, res) => {
-  if (req.body.secretKey !== ADMIN_KEY)
+  if (!req.isAdmin)
     return res.json({ message: "Unauthorized ❌" });
 
   const match = await Match.findById(req.body.matchId);
@@ -448,7 +448,7 @@ await Session.updateMany(
 
 // 🟢 Ball end → resume
 app.post("/api/ball-end", verifyToken, async (req, res) => {
-  if (req.body.secretKey !== ADMIN_KEY)
+  if (!req.isAdmin)
     return res.json({ message: "Unauthorized ❌" });
 
   const match = await Match.findById(req.body.matchId);
@@ -463,7 +463,7 @@ await Session.updateMany(
 
 // 🟡 Review start → full lock
 app.post("/api/review-start", verifyToken, async (req, res) => {
-  if (req.body.secretKey !== ADMIN_KEY)
+  if (!req.isAdmin)
     return res.json({ message: "Unauthorized ❌" });
 
   const match = await Match.findById(req.body.matchId);
@@ -479,7 +479,7 @@ app.post("/api/review-start", verifyToken, async (req, res) => {
 // 🟢 Review end → resume
 app.post("/api/review-end", verifyToken, async (req, res) => {
 
-  if (req.body.secretKey !== ADMIN_KEY)
+  if (!req.isAdmin)
     return res.json({ message: "Unauthorized ❌" });
 
   const match = await Match.findById(req.body.matchId);
@@ -500,7 +500,7 @@ app.post("/api/review-end", verifyToken, async (req, res) => {
 
 // ================= SESSION =================
 app.post("/api/create-session", verifyToken, async (req, res) => {
-  if (req.body.secretKey !== ADMIN_KEY)
+ if (!req.isAdmin)
     return res.json({ message: "Unauthorized ❌" });
 
   await new Session(req.body).save();
@@ -539,7 +539,7 @@ if (session.suspended === true) {
 });
 
 app.post("/api/session-result", verifyToken, async (req, res) => {
-  if (req.body.secretKey !== ADMIN_KEY)
+  if (!req.isAdmin)
     return res.json({ message: "Unauthorized ❌" });
 
   const bets = await SessionBet.find({ sessionId: req.body.sessionId });
