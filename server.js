@@ -526,7 +526,12 @@ app.post("/api/session-bet", verifyToken, async (req, res) => {
   const username = req.user.username;
   const { sessionId, type, amount } = req.body;
 
-  if (amount < 100) return res.json({ message: "Minimum 100 ❌" });
+  if (!amount || amount < 100 || amount > 100000)
+  return res.json({ message: "Invalid amount ❌" });
+
+if (!isValidNumber(amount)) {
+  return res.json({ message: "Invalid input ❌" });
+}
 
   const user = await User.findOne({ username });
   const session = await Session.findById(sessionId);
