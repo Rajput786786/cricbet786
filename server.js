@@ -164,9 +164,12 @@ if (!amount || amount < 100 || amount > 100000)
 if (!isValidNumber(amount)) {
   return res.json({ message: "Invalid input ❌" });
 }
-  const user = await User.findOne({ username });
-  const match = await Match.findById(matchId);
-  // 🚨 TEAM VALIDATION
+const user = await User.findOne({ username });
+const match = await Match.findById(matchId);
+
+if (!user || !match) return res.json({ message: "Error ❌" });
+
+// 🚨 TEAM VALIDATION (SAFE PLACE ✅)
 if (team !== match.teamA && team !== match.teamB) {
   return res.json({ message: "Invalid team ❌" });
 }
