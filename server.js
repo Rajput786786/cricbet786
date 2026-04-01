@@ -174,8 +174,6 @@ if (team !== match.teamA && team !== match.teamB) {
   return res.json({ message: "Invalid team ❌" });
 }
 
-if (!user || !match) return res.json({ message: "Error ❌" });
-
 // ✅ STEP 1: Match exist + safe check
 if (!match) {
   return res.json({ message: "Match not found ❌" });
@@ -537,8 +535,19 @@ if (!isValidNumber(amount)) {
 }
 
   const user = await User.findOne({ username });
-  const session = await Session.findById(sessionId);
-  // 🔴 CHECK: session suspended or not
+const session = await Session.findById(sessionId);
+
+// ✅ NULL CHECK
+if (!session) {
+  return res.json({ message: "Session not found ❌" });
+}
+
+// ✅ STATUS CHECK
+if (session.status !== "active") {
+  return res.json({ message: "Session closed ❌" });
+}
+
+// 🔴 SUSPEND CHECK
 if (session.suspended === true) {
   return res.json({ message: "Session Suspended ❌" });
 }
@@ -575,7 +584,11 @@ app.post("/api/session-result", verifyToken, async (req, res) => {
     await u.save();
     await b.save();
   }
-
+// 🔥 SESSION CLOSE
+  await Session.findByIdAndUpdate(req.body.sessionId, {
+  status: "closed",
+  result: "done"
+});
   res.json({ message: "Session result declared ✅" });
 });
 
