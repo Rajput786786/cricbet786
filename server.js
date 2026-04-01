@@ -38,6 +38,7 @@ const User = mongoose.model("User", new mongoose.Schema({
   password: String,
   balance: { type: Number, default: 0 },
   exposeBalance: { type: Number, default: 0 }
+  lastBetTime: { type: Number, default: 0 }
 }));
 
 const Match = mongoose.model("Match", new mongoose.Schema({
