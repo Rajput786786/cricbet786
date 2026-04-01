@@ -452,16 +452,22 @@ app.post("/api/review-start", verifyToken, async (req, res) => {
 
 // 🟢 Review end → resume
 app.post("/api/review-end", verifyToken, async (req, res) => {
+
   if (req.body.secretKey !== ADMIN_KEY)
     return res.json({ message: "Unauthorized ❌" });
 
   const match = await Match.findById(req.body.matchId);
 
-// 🟢 Resume all sessions
-await Session.updateMany(
-  { status: "active" },
-  { suspended: false }
-);
+  // 🟢 Resume all sessions
+  await Session.updateMany(
+    { status: "active" },
+    { suspended: false }
+  );
+
+  // 🟢 Resume match also
+  match.suspended = false;
+  match.suspendReason = "";
+  await match.save();
 
   res.json({ message: "Review end → Live 🟢" });
 });
