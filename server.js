@@ -174,6 +174,10 @@ if (now - user.lastBetTime < 2000) {
 }
 
   let odds = team === match.teamA ? match.oddsA : match.oddsB;
+  // 🛑 ODDS CHECK
+if (userOdds && userOdds !== odds) {
+  return res.json({ message: "Odds changed ❌" });
+}
 
   user.balance -= amount;
   user.exposeBalance += amount;
