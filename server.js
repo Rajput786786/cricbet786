@@ -42,6 +42,10 @@ function verifyToken(req, res, next) {
   }
 }
 
+function isValidNumber(n) {
+  return typeof n === "number" && !isNaN(n);
+}
+
 // 🔥 UPDATED USER MODEL (Expose Balance Added)
 const User = mongoose.model("User", new mongoose.Schema({
   username: { type: String, unique: true },
