@@ -412,11 +412,11 @@ app.post("/api/ball-start", verifyToken, async (req, res) => {
 
   const match = await Match.findById(req.body.matchId);
 
-  match.suspended = true;
-  match.suspendReason = "ball";
-
-  await match.save();
-
+  // 🔴 ONLY SESSION SUSPEND (OD चालू रहेगा)
+await Session.updateMany(
+  { status: "active" },
+  { suspended: true }
+);
   res.json({ message: "Ball started → Suspended 🔴" });
 });
 
