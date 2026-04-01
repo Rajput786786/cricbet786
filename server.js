@@ -486,6 +486,10 @@ app.post("/api/session-bet", verifyToken, async (req, res) => {
 
   const user = await User.findOne({ username });
   const session = await Session.findById(sessionId);
+  // 🔴 CHECK: session suspended or not
+if (session.suspended === true) {
+  return res.json({ message: "Session Suspended ❌" });
+}
 
   if (!user || !session) return res.json({ message: "Error ❌" });
   if (user.balance < amount) return res.json({ message: "Low balance ❌" });
