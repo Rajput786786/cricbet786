@@ -322,6 +322,67 @@ app.get("/api/my-bets", verifyToken, async (req, res) => {
   res.json(formatted);
 });
 
+// ================= ACCOUNT STATEMENT =================
+
+// 🔥 Full account statement
+app.get("/api/statement", verifyToken, async (req, res) => {
+  const username = req.user.username;
+
+  const deposits = await Deposit.find({ username });
+  const withdraws = await Withdraw.find({ username });
+  const bets = await Bet.find({ username });
+
+  let data = [];
+
+  // deposit (credit)
+  deposits.forEach(d => {
+    if (d.status === "approved") {
+      data.push({
+        type: "deposit",
+        credit: d.amount,
+        debit: 0,
+        date: d._id.getTimestamp()
+      });
+    }
+  });
+
+  // withdraw (debit)
+  withdraws.forEach(w => {
+    if (w.status === "approved") {
+      data.push({
+        type: "withdraw",
+        credit: 0,
+        debit: w.amount,
+        date: w._id.getTimestamp()
+      });
+    }
+  });
+
+  // bets
+  bets.forEach(b => {
+    if (b.result === "win") {
+      data.push({
+        type: "bet-win",
+        credit: b.amount * b.odds,
+        debit: 0,
+        date: b.createdAt
+      });
+    } else if (b.result === "lose") {
+      data.push({
+        type: "bet-loss",
+        credit: 0,
+        debit: b.amount,
+        date: b.createdAt
+      });
+    }
+  });
+
+  // sort by date
+  data.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  res.json(data);
+});
+
 // ================= SESSION =================
 app.post("/api/create-session", verifyToken, async (req, res) => {
   if (req.body.secretKey !== ADMIN_KEY)
