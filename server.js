@@ -145,6 +145,10 @@ app.post("/api/place-bet", verifyToken, async (req, res) => {
   const match = await Match.findById(matchId);
 
   if (!user || !match) return res.json({ message: "Error ❌" });
+  // 🔴 Suspend check (NEW)
+if (match.suspended) {
+  return res.json({ message: "Market Suspended (" + match.suspendReason + ") ❌" });
+}
   if (user.balance < amount) return res.json({ message: "Low balance ❌" });
 
   let odds = team === match.teamA ? match.oddsA : match.oddsB;
@@ -381,6 +385,68 @@ app.get("/api/statement", verifyToken, async (req, res) => {
   data.sort((a, b) => new Date(b.date) - new Date(a.date));
 
   res.json(data);
+});
+
+// ================= SUSPEND SYSTEM =================
+
+// 🔴 Ball start → suspend
+app.post("/api/ball-start", verifyToken, async (req, res) => {
+  if (req.body.secretKey !== ADMIN_KEY)
+    return res.json({ message: "Unauthorized ❌" });
+
+  const match = await Match.findById(req.body.matchId);
+
+  match.suspended = true;
+  match.suspendReason = "ball";
+
+  await match.save();
+
+  res.json({ message: "Ball started → Suspended 🔴" });
+});
+
+// 🟢 Ball end → resume
+app.post("/api/ball-end", verifyToken, async (req, res) => {
+  if (req.body.secretKey !== ADMIN_KEY)
+    return res.json({ message: "Unauthorized ❌" });
+
+  const match = await Match.findById(req.body.matchId);
+
+  match.suspended = false;
+  match.suspendReason = "";
+
+  await match.save();
+
+  res.json({ message: "Ball ended → Live 🟢" });
+});
+
+// 🟡 Review start → full lock
+app.post("/api/review-start", verifyToken, async (req, res) => {
+  if (req.body.secretKey !== ADMIN_KEY)
+    return res.json({ message: "Unauthorized ❌" });
+
+  const match = await Match.findById(req.body.matchId);
+
+  match.suspended = true;
+  match.suspendReason = "review";
+
+  await match.save();
+
+  res.json({ message: "Review → FULL LOCK 🟡" });
+});
+
+// 🟢 Review end → resume
+app.post("/api/review-end", verifyToken, async (req, res) => {
+  if (req.body.secretKey !== ADMIN_KEY)
+    return res.json({ message: "Unauthorized ❌" });
+
+  const match = await Match.findById(req.body.matchId);
+
+  match.suspended = false;
+  match.suspendReason = "";
+
+  await match.save();
+
+  res.json({ message: "Review end → Live 🟢" });
 });
 
 // ================= SESSION =================
