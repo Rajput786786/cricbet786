@@ -167,6 +167,11 @@ if (match.suspended === true) {
   return res.json({ message: "Market Suspended (" + match.suspendReason + ") ❌" });
 }
   if (user.balance < amount) return res.json({ message: "Low balance ❌" });
+  // 🛑 COOLDOWN (2 sec)
+const now = Date.now();
+if (now - user.lastBetTime < 2000) {
+  return res.json({ message: "Wait 2 sec ❌" });
+}
 
   let odds = team === match.teamA ? match.oddsA : match.oddsB;
 
