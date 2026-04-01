@@ -457,10 +457,10 @@ app.post("/api/review-end", verifyToken, async (req, res) => {
 
   const match = await Match.findById(req.body.matchId);
 
-  // 🔴 ONLY SESSION SUSPEND (OD चालू रहेगा)
+// 🟢 Resume all sessions
 await Session.updateMany(
   { status: "active" },
-  { suspended: true }
+  { suspended: false }
 );
 
   res.json({ message: "Review end → Live 🟢" });
