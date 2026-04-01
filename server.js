@@ -301,6 +301,7 @@ app.post("/api/session-bet", verifyToken, async (req, res) => {
   let rate = type === "yes" ? session.yesRate : session.noRate;
 
   user.balance -= amount;
+  user.exposeBalance += amount;
   await user.save();
 
   await new SessionBet({ username, sessionId, type, amount, rate }).save();
@@ -316,6 +317,7 @@ app.post("/api/session-result", verifyToken, async (req, res) => {
 
   for (let b of bets) {
     const u = await User.findOne({ username: b.username });
+    u.exposeBalance -= b.amount;
 
     if (b.type === req.body.result) {
       u.balance += b.amount + (b.amount * b.rate) / 100;
