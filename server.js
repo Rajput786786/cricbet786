@@ -37,7 +37,7 @@ const User = mongoose.model("User", new mongoose.Schema({
   username: { type: String, unique: true },
   password: String,
   balance: { type: Number, default: 0 },
-  exposeBalance: { type: Number, default: 0 }
+  exposeBalance: { type: Number, default: 0 },
   lastBetTime: { type: Number, default: 0 }
 }));
 
