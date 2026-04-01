@@ -181,6 +181,7 @@ if (userOdds && userOdds !== odds) {
 
   user.balance -= amount;
   user.exposeBalance += amount;
+  user.lastBetTime = Date.now();
   await user.save();
 
   await new Bet({ username, matchId, team, amount, odds }).save();
