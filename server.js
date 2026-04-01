@@ -194,16 +194,21 @@ app.post("/api/declare-result", verifyToken, async (req, res) => {
   if (req.body.secretKey !== ADMIN_KEY)
     return res.json({ message: "Unauthorized ❌" });
 
+  // 🔥 GET MATCH
+  const match = await Match.findById(req.body.matchId);
+
+  // 🔴 MATCH CLOSE
+  match.status = "closed";
+  await match.save();
+
   const bets = await Bet.find({ matchId: req.body.matchId });
 
   for (let b of bets) {
     const u = await User.findOne({ username: b.username });
 
-    // 🔥 expose se paisa hatao
     u.exposeBalance -= b.amount;
 
     if (b.team === req.body.winnerTeam) {
-      // 🔥 winner ko payout do
       u.balance += b.amount * b.odds;
       b.result = "win";
     } else {
@@ -214,7 +219,7 @@ app.post("/api/declare-result", verifyToken, async (req, res) => {
     await b.save();
   }
 
-  res.json({ message: "Result declared ✅" });
+  res.json({ message: "Result declared & match closed ✅" });
 });
 
 // ================= DEPOSIT =================
