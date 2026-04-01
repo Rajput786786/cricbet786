@@ -55,7 +55,7 @@ const Bet = mongoose.model("Bet", new mongoose.Schema({
   amount: Number,
   odds: Number,
   result: { type: String, default: "pending" }
-}));
+}, { timestamps: true }));
 
 const Deposit = mongoose.model("Deposit", new mongoose.Schema({
   username: String,
