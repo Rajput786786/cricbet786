@@ -35,6 +35,7 @@ function verifyToken(req, res, next) {
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded;
+    req.isAdmin = req.headers["adminkey"] === ADMIN_KEY;
     next();
   } catch {
     res.json({ message: "Invalid token ❌" });
