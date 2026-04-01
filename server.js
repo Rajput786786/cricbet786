@@ -168,10 +168,16 @@ app.post("/api/declare-result", verifyToken, async (req, res) => {
   for (let b of bets) {
     const u = await User.findOne({ username: b.username });
 
+    // 🔥 expose se paisa hatao
+    u.exposeBalance -= b.amount;
+
     if (b.team === req.body.winnerTeam) {
-      u.exposeBalance -= b.amount;
+      // 🔥 winner ko payout do
+      u.balance += b.amount * b.odds;
       b.result = "win";
-    } else b.result = "lose";
+    } else {
+      b.result = "lose";
+    }
 
     await u.save();
     await b.save();
