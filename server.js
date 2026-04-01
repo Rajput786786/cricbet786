@@ -45,7 +45,11 @@ const Match = mongoose.model("Match", new mongoose.Schema({
   teamB: String,
   oddsA: Number,
   oddsB: Number,
-  status: { type: String, default: "live" }
+  status: { type: String, default: "live" },
+
+  // 🔴 NEW (ADD THIS)
+  suspended: { type: Boolean, default: false },
+  suspendReason: { type: String, default: "" }
 }));
 
 const Bet = mongoose.model("Bet", new mongoose.Schema({
