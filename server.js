@@ -82,6 +82,7 @@ const Session = mongoose.model("Session", new mongoose.Schema({
   yesRate: Number,
   noRate: Number,
   status: { type: String, default: "active" },
+  suspended: { type: Boolean, default: false },
   result: { type: String, default: "pending" }
 }));
 
