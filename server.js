@@ -219,6 +219,9 @@ app.post("/api/declare-result", verifyToken, async (req, res) => {
   // 🔥 GET MATCH
   const match = await Match.findById(req.body.matchId);
 
+  if (!match)
+    return res.json({ message: "Match not found ❌" });
+
   // 🔴 MATCH CLOSE
   match.status = "closed";
   await match.save();
@@ -228,10 +231,16 @@ app.post("/api/declare-result", verifyToken, async (req, res) => {
   for (let b of bets) {
     const u = await User.findOne({ username: b.username });
 
+    if (!u) continue;
+
+    // 🔓 expose वापस
     u.exposeBalance -= b.amount;
 
-    if (b.team === req.body.winnerTeam) {
-      u.balance += b.amount * b.odds;
+    // ✅ FIX: winnerTeam → winner (IMPORTANT)
+    if (b.team === req.body.winner) {
+      const winAmount = b.amount * b.odds;
+
+      u.balance += winAmount; // total payout
       b.result = "win";
     } else {
       b.result = "lose";
@@ -243,7 +252,6 @@ app.post("/api/declare-result", verifyToken, async (req, res) => {
 
   res.json({ message: "Result declared & match closed ✅" });
 });
-
 // ================= DEPOSIT =================
 app.post("/api/deposit-request", verifyToken, async (req, res) => {
   const username = req.user.username;
