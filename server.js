@@ -608,4 +608,12 @@ app.get("/", (req, res) => {
   res.send("Cricbet786 Running 🚀");
 });
 
+// 🛡️ CRASH PROTECTION
+process.on('uncaughtException', (err) => {
+  console.error('UNCAUGHT:', err);
+});
+
+process.on('unhandledRejection', (err) => {
+  console.error('REJECTION:', err);
+});
 app.listen(10000, () => console.log("🚀 Server Running"));
