@@ -4,6 +4,7 @@ const cors = require("cors");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const rateLimit = require("express-rate-limit");
+const { startOddsEngine } = require("./engine/liveOdds");
 
 const app = express();
 app.set('trust proxy', 1);
@@ -616,4 +617,5 @@ process.on('uncaughtException', (err) => {
 process.on('unhandledRejection', (err) => {
   console.error('REJECTION:', err);
 });
+startOddsEngine();
 app.listen(10000, () => console.log("🚀 Server Running"));
