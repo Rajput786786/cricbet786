@@ -1,73 +1,56 @@
-// ================= ODDS ENGINE =================
+function getOdds(data) {
+  let { runs, balls, wickets, target } = data;
 
-// Calculate chance based on match situation
-function calculateChance({ runs, balls, wickets }) {
-    let baseChance = 50;
+  if (!target || balls <= 0) {
+    return { oddsA: 2, oddsB: 2 };
+  }
 
-    let rrr = runs / (balls / 6);
+  let R = target - runs;
+  let B = balls;
+  let W = 10 - wickets;
 
-    let rrrEffect = 0;
-    if (rrr >= 9 && rrr <= 10) rrrEffect = 5;
-    else if (rrr <= 12) rrrEffect = 10;
-    else if (rrr <= 14) rrrEffect = 15;
-    else if (rrr <= 16) rrrEffect = 20;
-    else if (rrr <= 18) rrrEffect = 30;
-    else if (rrr > 18) rrrEffect = 50;
+  // 🧠 RRR
+  let rrr = R / (B / 6);
 
-    let ballEffect = 0;
-    if (balls <= 36 && balls > 24) ballEffect = 5;
-    else if (balls <= 24 && balls > 12) ballEffect = 10;
-    else if (balls <= 12 && balls > 6) ballEffect = 15;
-    else if (balls <= 6) ballEffect = 30;
+  // 🎯 BASE CHANCE
+  let CA = 50;
 
-    let wicketEffect = 0;
-    if (wickets <= 7 && wickets > 5) wicketEffect = 5;
-    else if (wickets <= 5 && wickets > 3) wicketEffect = 10;
-    else if (wickets <= 3 && wickets > 1) wicketEffect = 20;
-    else if (wickets === 1) wicketEffect = 40;
+  // ================= RRR IMPACT =================
+  if (rrr >= 9 && rrr <= 10) CA -= 5;
+  else if (rrr <= 12) CA -= 10;
+  else if (rrr <= 14) CA -= 15;
+  else if (rrr <= 16) CA -= 20;
+  else if (rrr <= 18) CA -= 30;
+  else if (rrr <= 20) CA -= 40;
+  else if (rrr > 20) CA -= 60;
 
-    let totalDrop = rrrEffect + ballEffect + wicketEffect;
+  // ================= BALL IMPACT =================
+  if (B <= 60 && B > 36) CA -= 5;
+  else if (B <= 36 && B > 24) CA -= 10;
+  else if (B <= 24 && B > 12) CA -= 15;
+  else if (B <= 12 && B > 6) CA -= 20;
+  else if (B <= 6) CA -= 30;
 
-    let chanceA = baseChance - totalDrop;
+  // ================= WICKET IMPACT =================
+  if (W <= 7 && W >= 6) CA -= 5;
+  else if (W <= 5 && W >= 4) CA -= 10;
+  else if (W <= 3 && W >= 2) CA -= 20;
+  else if (W === 1) CA -= 40;
 
-    if (chanceA < 0.1) chanceA = 0.1;
-    if (chanceA > 99.9) chanceA = 99.9;
+  // ================= CLAMP =================
+  if (CA < 0.1) CA = 0.1;
+  if (CA > 99.9) CA = 99.9;
 
-    let chanceB = 100 - chanceA;
+  let CB = 100 - CA;
 
-    return { chanceA, chanceB };
-}
+  // ================= ODDS =================
+  let oddsA = (100 / CA) * 0.9;
+  let oddsB = (100 / CB) * 0.9;
 
-// Convert chance to odds
-function calculateOdds(chanceA, chanceB) {
-    let oddsA = 100 / chanceA;
-    let oddsB = 100 / chanceB;
-
-    // Margin
-    oddsA = oddsA * 0.9;
-    oddsB = oddsB * 0.9;
-
-    // Round
-    oddsA = Number(oddsA.toFixed(2));
-    oddsB = Number(oddsB.toFixed(2));
-
-    return { oddsA, oddsB };
-}
-
-// MAIN FUNCTION
-function getOdds(matchData) {
-    const { runs, balls, wickets } = matchData;
-
-    const { chanceA, chanceB } = calculateChance({ runs, balls, wickets });
-
-    const { oddsA, oddsB } = calculateOdds(chanceA, chanceB);
-
-    return {
-        chanceA,
-        chanceB,
-        oddsA,
-        oddsB
-    };
+  return {
+    oddsA: parseFloat(oddsA.toFixed(2)),
+    oddsB: parseFloat(oddsB.toFixed(2))
+  };
 }
 
 module.exports = { getOdds };
