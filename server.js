@@ -72,6 +72,7 @@ const Match = mongoose.model("Match", new mongoose.Schema({
   runs: { type: Number, default: 0 },
   balls: { type: Number, default: 120 },
   wickets: { type: Number, default: 0 },
+  target: { type: Number, default: 120 },
 
   // 🔴 SUSPEND (OLD SAME)
   suspended: { type: Boolean, default: false },
