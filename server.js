@@ -164,6 +164,33 @@ app.post("/api/create-match", verifyToken, async (req, res) => {
 app.get("/api/matches", verifyToken, async (req, res) => {
   res.json(await Match.find());
 });
+// ================= UPDATE SCORE =================
+app.post("/api/update-score", verifyToken, async (req, res) => {
+  if (!req.isAdmin)
+    return res.json({ message: "Unauthorized ❌" });
+
+  const { matchId, runs, balls, wickets } = req.body;
+
+  const match = await Match.findById(matchId);
+
+  if (!match)
+    return res.json({ message: "Match not found ❌" });
+
+  if (isValidNumber(runs)) match.runs = runs;
+  if (isValidNumber(balls)) match.balls = balls;
+  if (isValidNumber(wickets)) match.wickets = wickets;
+
+  await match.save();
+
+  res.json({
+    message: "Score updated ✅",
+    data: {
+      runs: match.runs,
+      balls: match.balls,
+      wickets: match.wickets
+    }
+  });
+});
 
 // ================= BET =================
 app.post("/api/place-bet", verifyToken, async (req, res) => {
