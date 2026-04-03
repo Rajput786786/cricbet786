@@ -4,7 +4,6 @@ const cors = require("cors");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const rateLimit = require("express-rate-limit");
-const { startOddsEngine } = require("./engine/liveOdds");
 
 const app = express();
 app.set('trust proxy', 1);
@@ -30,6 +29,9 @@ const JWT_SECRET = process.env.JWT_SECRET || "LR_SECRET_786";
 mongoose.connect(MONGO_URI)
 .then(() => console.log("✅ MongoDB Connected"))
 .catch(err => console.log("❌ MongoDB Error:", err));
+require("./models/Match");
+require("./models/User");
+const { startOddsEngine } = require("./engine/liveOdds");
 
 // ================= MIDDLEWARE =================
 function verifyToken(req, res, next) {
