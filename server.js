@@ -652,5 +652,15 @@ process.on('uncaughtException', (err) => {
 process.on('unhandledRejection', (err) => {
   console.error('REJECTION:', err);
 });
+// ================= EXPORT MODELS =================
+module.exports = {
+  models: {
+    Match,
+    User,
+    Bet,
+    Session,
+    SessionBet
+  }
+};
 startOddsEngine();
 app.listen(10000, () => console.log("🚀 Server Running"));
