@@ -62,11 +62,18 @@ const User = mongoose.model("User", new mongoose.Schema({
 const Match = mongoose.model("Match", new mongoose.Schema({
   teamA: String,
   teamB: String,
+
   oddsA: Number,
   oddsB: Number,
+
   status: { type: String, default: "live" },
 
-  // 🔴 NEW (ADD THIS)
+  // 🔥 LIVE MATCH DATA (NEW ADD)
+  runs: { type: Number, default: 0 },
+  balls: { type: Number, default: 120 },
+  wickets: { type: Number, default: 0 },
+
+  // 🔴 SUSPEND (OLD SAME)
   suspended: { type: Boolean, default: false },
   suspendReason: { type: String, default: "" }
 }));
