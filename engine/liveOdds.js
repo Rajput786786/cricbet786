@@ -1,11 +1,5 @@
 // ===================== IMPORT =====================
-let Match;
-try {
-  const { models } = require("../server");
-  Match = models.Match;
-} catch (e) {
-  Match = require("mongoose").model("Match");
-}
+const Match = require("../models/Match");
 
 // ===================== MEMORY =====================
 const lastState = {};
@@ -64,11 +58,7 @@ async function updateOdds() {
     const ballEffect = getBallEffect(B);
     const wicketEffect = getWicketEffect(W);
 
-    const prev = lastState[m._id] || {
-      runs: m.runs,
-      balls: m.balls,
-      wickets: m.wickets
-    };
+    const prev = lastState[m._id] || m;
 
     let impact = 0;
 
@@ -91,11 +81,8 @@ async function updateOdds() {
     let oddsA = (100 / CA) * 0.9;
     let oddsB = (100 / CB) * 0.9;
 
-    oddsA = Number(oddsA.toFixed(2));
-    oddsB = Number(oddsB.toFixed(2));
-
-    m.oddsA = oddsA;
-    m.oddsB = oddsB;
+    m.oddsA = Number(oddsA.toFixed(2));
+    m.oddsB = Number(oddsB.toFixed(2));
 
     await m.save();
 
@@ -109,9 +96,7 @@ async function updateOdds() {
 
 // ===================== LOOP =====================
 function startOddsEngine() {
-  setInterval(() => {
-    updateOdds();
-  }, 2000);
+  setInterval(updateOdds, 2000);
 }
 
 module.exports = { startOddsEngine };
