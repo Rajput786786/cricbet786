@@ -217,10 +217,19 @@ if (userOdds && userOdds !== odds) {
   return res.json({ message: "Odds changed ❌" });
 }
 
-  user.balance -= amount;
-  user.exposeBalance += amount;
-  user.lastBetTime = Date.now();
-  await user.save();
+// 🔥 EXPOSURE CHECK (NEW LOGIC)
+let newExposure = user.exposeBalance + amount;
+
+// 🛑 MAX EXPOSURE LIMIT (SET 10000 for now)
+if (newExposure > 10000) {
+  return res.json({ message: "Exposure limit crossed ❌" });
+}
+
+// ✅ APPLY
+user.balance -= amount;
+user.exposeBalance = newExposure;
+user.lastBetTime = Date.now();
+await user.save();
 
   await new Bet({ username, matchId, team, amount, odds }).save();
 
