@@ -183,7 +183,8 @@ if (!isValidNumber(amount)) {
 const user = await User.findOne({ username });
 const match = await Match.findById(matchId);
 
-if (!user || !match) return res.json({ message: "Error ❌" });
+if (!user) return res.json({ message: "User not found ❌" });
+if (!match) return res.json({ message: "Match not found ❌" });
 
 // 🚨 TEAM VALIDATION (SAFE PLACE ✅)
 if (team !== match.teamA && team !== match.teamB) {
