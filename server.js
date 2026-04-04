@@ -52,34 +52,9 @@ function isValidNumber(n) {
   return typeof n === "number" && !isNaN(n);
 }
 
-// 🔥 UPDATED USER MODEL (Expose Balance Added)
-const User = mongoose.model("User", new mongoose.Schema({
-  username: { type: String, unique: true },
-  password: String,
-  balance: { type: Number, default: 0 },
-  exposeBalance: { type: Number, default: 0 },
-  lastBetTime: { type: Number, default: 0 }
-}));
-
-const Match = mongoose.model("Match", new mongoose.Schema({
-  teamA: String,
-  teamB: String,
-
-  oddsA: Number,
-  oddsB: Number,
-
-  status: { type: String, default: "live" },
-
-  // 🔥 LIVE MATCH DATA (NEW ADD)
-  runs: { type: Number, default: 0 },
-  balls: { type: Number, default: 120 },
-  wickets: { type: Number, default: 0 },
-  target: { type: Number, default: 120 },
-
-  // 🔴 SUSPEND (OLD SAME)
-  suspended: { type: Boolean, default: false },
-  suspendReason: { type: String, default: "" }
-}));
+// ✅ USE REGISTERED MODELS
+const User = mongoose.model("User");
+const Match = mongoose.model("Match");
 
 const Bet = mongoose.model("Bet", new mongoose.Schema({
   username: String,
