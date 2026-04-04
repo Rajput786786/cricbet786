@@ -190,11 +190,6 @@ if (team !== match.teamA && team !== match.teamB) {
   return res.json({ message: "Invalid team ❌" });
 }
 
-// ✅ STEP 1: Match exist + safe check
-if (!match) {
-  return res.json({ message: "Match not found ❌" });
-}
-
 // ✅ STEP 2: Match closed check
 if (match.status !== "live") {
   return res.json({ message: "Match closed ❌" });
