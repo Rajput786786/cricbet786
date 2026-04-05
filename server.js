@@ -363,6 +363,7 @@ app.post("/api/approve-deposit", verifyToken, async (req, res) => {
   const d = await Deposit.findById(req.body.depositId);
   if (!d) return res.json({ message: "Deposit not found ❌" });
   const u = await User.findOne({ username: d.username });
+  if (!u) return res.json({ message: "User not found ❌" });
 
   if (d.status !== "pending")
     return res.json({ message: "Already ❌" });
@@ -407,6 +408,7 @@ app.post("/api/approve-withdraw", verifyToken, async (req, res) => {
   const w = await Withdraw.findById(req.body.withdrawId);
   if (!w) return res.json({ message: "Withdraw not found ❌" });
   const u = await User.findOne({ username: w.username });
+  if (!u) return res.json({ message: "User not found ❌" });
 
   if (u.balance < w.amount)
     return res.json({ message: "Insufficient balance ❌" });
