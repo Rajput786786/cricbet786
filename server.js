@@ -361,6 +361,7 @@ app.post("/api/approve-deposit", verifyToken, async (req, res) => {
     return res.json({ message: "Unauthorized ❌" });
 
   const d = await Deposit.findById(req.body.depositId);
+  if (!d) return res.json({ message: "Deposit not found ❌" });
   const u = await User.findOne({ username: d.username });
 
   if (d.status !== "pending")
@@ -404,6 +405,7 @@ app.post("/api/approve-withdraw", verifyToken, async (req, res) => {
     return res.json({ message: "Unauthorized ❌" });
 
   const w = await Withdraw.findById(req.body.withdrawId);
+  if (!w) return res.json({ message: "Withdraw not found ❌" });
   const u = await User.findOne({ username: w.username });
 
   if (u.balance < w.amount)
@@ -671,6 +673,7 @@ app.post("/api/session-result", verifyToken, async (req, res) => {
   for (let b of bets) {
     const u = await User.findOne({ username: b.username });
     u.exposeBalance -= b.amount;
+    if (u.exposeBalance < 0) u.exposeBalance = 0;
 
     if (b.type === req.body.result) {
       u.balance += b.amount + (b.amount * b.rate) / 100;
