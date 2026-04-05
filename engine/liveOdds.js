@@ -81,6 +81,31 @@ async function updateOdds() {
     let oddsA = (100 / CA) * 0.9;
     let oddsB = (100 / CB) * 0.9;
 
+// ================= MICRO MOVEMENT =================
+const prevOdds = lastState[m._id] || {};
+
+let microA = (Math.random() * 0.04 - 0.02); // -0.02 to +0.02
+let microB = (Math.random() * 0.04 - 0.02);
+
+// Smooth movement (jump avoid)
+if (prevOdds.oddsA) {
+  oddsA = (prevOdds.oddsA * 0.7) + (oddsA * 0.3);
+}
+if (prevOdds.oddsB) {
+  oddsB = (prevOdds.oddsB * 0.7) + (oddsB * 0.3);
+}
+
+// Add micro
+oddsA += microA;
+oddsB += microB;
+
+// Final clamp
+oddsA = Math.max(1.01, oddsA);
+oddsB = Math.max(1.01, oddsB);
+
+m.oddsA = Number(oddsA.toFixed(2));
+m.oddsB = Number(oddsB.toFixed(2));
+
     m.oddsA = Number(oddsA.toFixed(2));
     m.oddsB = Number(oddsB.toFixed(2));
 
