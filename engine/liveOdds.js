@@ -105,12 +105,8 @@ oddsB = Math.max(1.01, oddsB);
 
 m.oddsA = Number(oddsA.toFixed(2));
 m.oddsB = Number(oddsB.toFixed(2));
-
-    m.oddsA = Number(oddsA.toFixed(2));
-    m.oddsB = Number(oddsB.toFixed(2));
-
     await m.save();
-
+    
     lastState[m._id] = {
   runs: m.runs,
   balls: m.balls,
