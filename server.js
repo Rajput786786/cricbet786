@@ -60,6 +60,7 @@ const Bet = mongoose.model("Bet", new mongoose.Schema({
   username: String,
   matchId: String,
   team: String,
+  type: String,
   amount: Number,
   odds: Number,
   result: { type: String, default: "pending" }
@@ -173,7 +174,7 @@ app.post("/api/update-score", verifyToken, async (req, res) => {
 // ================= BET =================
 app.post("/api/place-bet", verifyToken, async (req, res) => {
   const username = req.user.username;
-  const { matchId, team, amount, odds: userOdds } = req.body;
+  const { matchId, team, type, amount, odds: userOdds } = req.body;
 
 if (!amount || amount < 100 || amount > 100000)
   return res.json({ message: "Invalid amount ❌" });
