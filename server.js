@@ -188,6 +188,9 @@ if (!user) return res.json({ message: "User not found ❌" });
 if (!match) return res.json({ message: "Match not found ❌" });
 
 // 🚨 TEAM VALIDATION (SAFE PLACE ✅)
+  if (type !== "back" && type !== "lay") {
+  return res.json({ message: "Invalid bet type ❌" });
+  }
 if (team !== match.teamA && team !== match.teamB) {
   return res.json({ message: "Invalid team ❌" });
 }
@@ -228,7 +231,7 @@ user.exposeBalance = newExposure;
 user.lastBetTime = Date.now();
 await user.save();
 
-  await new Bet({ username, matchId, team, amount, odds }).save();
+  await new Bet({ username, matchId, team, type, amount, odds }).save();
 
   res.json({ message: "Bet placed ✅" });
 });
