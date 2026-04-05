@@ -170,6 +170,50 @@ app.post("/api/update-score", verifyToken, async (req, res) => {
     }
   });
 });
+// ================= BOOK SYSTEM =================
+
+// 🔥 Get user match-wise book (profit/loss projection)
+app.get("/api/book/:matchId", verifyToken, async (req, res) => {
+  const username = req.user.username;
+  const matchId = req.params.matchId;
+
+  const bets = await Bet.find({ username, matchId });
+
+  const match = await Match.findById(matchId);
+
+  if (!match) return res.json({ message: "Match not found ❌" });
+
+  let book = {
+    [match.teamA]: 0,
+    [match.teamB]: 0
+  };
+
+  bets.forEach(b => {
+    if (b.type === "back") {
+      // BACK
+      if (b.team === match.teamA) {
+        book[match.teamA] += b.amount * (b.odds - 1);
+        book[match.teamB] -= b.amount;
+      } else {
+        book[match.teamB] += b.amount * (b.odds - 1);
+        book[match.teamA] -= b.amount;
+      }
+    } else {
+      // LAY
+      let loss = (b.odds - 1) * b.amount;
+
+      if (b.team === match.teamA) {
+        book[match.teamA] -= loss;
+        book[match.teamB] += b.amount;
+      } else {
+        book[match.teamB] -= loss;
+        book[match.teamA] += b.amount;
+      }
+    }
+  });
+
+  res.json(book);
+});
 
 // ================= BET =================
 app.post("/api/place-bet", verifyToken, async (req, res) => {
