@@ -326,7 +326,9 @@ u.exposeBalance -= loss;
 
     // ✅ FIX: winnerTeam → winner (IMPORTANT)
     if (b.team === req.body.winner) {
-      const winAmount = b.amount * b.odds;
+     let profit = (b.odds - 1) * b.amount;
+
+u.balance += b.amount + profit; // stake + profit
 
       u.balance += winAmount; // total payout
       b.result = "win";
