@@ -218,13 +218,24 @@ if (userOdds && userOdds !== odds) {
 }
 
 // 🔥 EXPOSURE CHECK (NEW LOGIC)
-let newExposure = user.exposeBalance + amount;
+// 🔥 REAL EXPOSURE (BACK / LAY)
 
-// 🛑 MAX EXPOSURE LIMIT (SET 10000 for now)
+let loss = 0;
+
+if (type === "back") {
+  // BACK → loss = stake
+  loss = amount;
+} else if (type === "lay") {
+  // LAY → loss = (odds - 1) * amount
+  loss = (odds - 1) * amount;
+}
+
+let newExposure = user.exposeBalance + loss;
+
+// 🛑 MAX EXPOSURE LIMIT
 if (newExposure > 10000) {
   return res.json({ message: "Exposure limit crossed ❌" });
 }
-
 // ✅ APPLY
 user.balance -= amount;
 user.exposeBalance = newExposure;
@@ -259,7 +270,15 @@ app.post("/api/declare-result", verifyToken, async (req, res) => {
     if (!u) continue;
 
     // 🔓 expose वापस
-    u.exposeBalance -= b.amount;
+    let loss = 0;
+
+if (b.type === "back") {
+  loss = b.amount;
+} else if (b.type === "lay") {
+  loss = (b.odds - 1) * b.amount;
+}
+
+u.exposeBalance -= loss;
 
     // ✅ FIX: winnerTeam → winner (IMPORTANT)
     if (b.team === req.body.winner) {
