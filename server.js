@@ -296,13 +296,18 @@ app.post("/api/declare-result", verifyToken, async (req, res) => {
   if (!req.isAdmin)
     return res.json({ message: "Unauthorized ❌" });
 
-  // 🔥 GET MATCH
-  const match = await Match.findById(req.body.matchId);
+  if (!req.body.winner) {
+    return res.json({ message: "Winner required ❌" });
+  }
 
+  const match = await Match.findById(req.body.matchId);
   if (!match)
     return res.json({ message: "Match not found ❌" });
 
-  // 🔴 MATCH CLOSE
+  if (match.status === "closed") {
+    return res.json({ message: "Already declared ❌" });
+  }
+
   match.status = "closed";
   await match.save();
 
@@ -310,27 +315,20 @@ app.post("/api/declare-result", verifyToken, async (req, res) => {
 
   for (let b of bets) {
     const u = await User.findOne({ username: b.username });
-
     if (!u) continue;
 
-    // 🔓 expose वापस
     let loss = 0;
+    if (b.type === "back") loss = b.amount;
+    else if (b.type === "lay") loss = (b.odds - 1) * b.amount;
 
-if (b.type === "back") {
-  loss = b.amount;
-} else if (b.type === "lay") {
-  loss = (b.odds - 1) * b.amount;
-}
+    u.exposeBalance -= loss;
 
-u.exposeBalance -= loss;
+    // 🛡️ FIX
+    if (u.exposeBalance < 0) u.exposeBalance = 0;
 
-    // ✅ FIX: winnerTeam → winner (IMPORTANT)
     if (b.team === req.body.winner) {
-     let profit = (b.odds - 1) * b.amount;
-
-u.balance += b.amount + profit; // stake + profit
-
-      u.balance += winAmount; // total payout
+      const winAmount = b.amount * b.odds;
+      u.balance += winAmount;
       b.result = "win";
     } else {
       b.result = "lose";
