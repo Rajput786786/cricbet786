@@ -207,7 +207,7 @@ if (match.suspended === true) {
   if (user.balance < amount) return res.json({ message: "Low balance ❌" });
   // 🛑 COOLDOWN (2 sec)
 const now = Date.now();
-if (now - user.lastBetTime < 2000) {
+if (user.lastBetTime && now - user.lastBetTime < 2000) {
   return res.json({ message: "Wait 2 sec ❌" });
 }
 
