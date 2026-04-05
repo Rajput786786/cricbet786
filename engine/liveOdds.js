@@ -112,10 +112,12 @@ m.oddsB = Number(oddsB.toFixed(2));
     await m.save();
 
     lastState[m._id] = {
-      runs: m.runs,
-      balls: m.balls,
-      wickets: m.wickets
-    };
+  runs: m.runs,
+  balls: m.balls,
+  wickets: m.wickets,
+  oddsA: m.oddsA,
+  oddsB: m.oddsB
+   };
   }
 }
 
