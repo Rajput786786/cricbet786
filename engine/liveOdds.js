@@ -102,8 +102,8 @@ if (isEvent && !eventState[m._id]) {
 
   if (diff < 3) {
     // 🔥 FAST FLUCTUATION (3 sec)
-    oddsA += (Math.random() * 0.12 - 0.06);
-    oddsB += (Math.random() * 0.12 - 0.06);
+oddsA += (Math.random() * 0.12 - 0.06);
+oddsB += (Math.random() * 0.12 - 0.06);
                 } else {
     // ✅ STABLE AFTER 3 SEC
     delete eventState[m._id];
