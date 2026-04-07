@@ -74,6 +74,9 @@ async function updateOdds() {
     if (runDiff === 6) impact += 8;
 
     let CA = 50 - (rrrEffect + ballEffect + wicketEffect) + impact;
+    // 🔥 MICRO ON % (hidden)
+    let micro = (Math.random() * 0.2 - 0.1);
+    CA += micro;
 
     CA = clamp(CA, 0.1, 99.9);
     const CB = 100 - CA;
@@ -84,27 +87,29 @@ async function updateOdds() {
 // ================= MICRO MOVEMENT =================
 const prevOdds = lastState[m._id] || {};
 
-let microA = (Math.random() * 0.04 - 0.02); // -0.02 to +0.02
-let microB = (Math.random() * 0.04 - 0.02);
-
-// Smooth movement (jump avoid)
-if (prevOdds.oddsA) {
-  oddsA = (prevOdds.oddsA * 0.7) + (oddsA * 0.3);
-}
-if (prevOdds.oddsB) {
-  oddsB = (prevOdds.oddsB * 0.7) + (oddsB * 0.3);
-}
-
-// Add micro
-oddsA += microA;
-oddsB += microB;
-
 // Final clamp
 oddsA = Math.max(1.01, oddsA);
 oddsB = Math.max(1.01, oddsB);
 
-m.oddsA = Number(oddsA.toFixed(2));
-m.oddsB = Number(oddsB.toFixed(2));
+const prevOdds = lastState[m._id] || {};
+
+let finalOddsA = Number(oddsA.toFixed(2));
+let finalOddsB = Number(oddsB.toFixed(2));
+
+// 🔥 UI FILTER (0.03 threshold)
+if (
+  !prevOdds.oddsA ||
+  Math.abs(finalOddsA - prevOdds.oddsA) >= 0.03
+) {
+  m.oddsA = finalOddsA;
+}
+
+if (
+  !prevOdds.oddsB ||
+  Math.abs(finalOddsB - prevOdds.oddsB) >= 0.03
+) {
+  m.oddsB = finalOddsB;
+}
     await m.save();
     
     lastState[m._id] = {
