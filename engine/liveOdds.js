@@ -85,8 +85,7 @@ async function updateOdds() {
     let oddsB = (100 / CB) * 0.9;
 
 // ================= MICRO MOVEMENT =================
-const prevOdds = lastState[m._id] || {};
-
+    
 // Final clamp
 oddsA = Math.max(1.01, oddsA);
 oddsB = Math.max(1.01, oddsB);
