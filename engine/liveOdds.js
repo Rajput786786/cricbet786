@@ -77,11 +77,11 @@ async function updateOdds() {
     if (runDiff === 4) impact += 5;
     if (runDiff === 6) impact += 8;
     
-    if (isEvent) {
-         eventState[m._id] = {
-                  start: Date.now()
-         };
-      }
+if (isEvent && !eventState[m._id]) {
+  eventState[m._id] = {
+    start: Date.now()
+  };
+}
 
     let CA = 50 - (rrrEffect + ballEffect + wicketEffect) + impact;
     // 🔥 MICRO ON % (hidden)
