@@ -67,7 +67,7 @@ async function updateOdds() {
     const runDiff = m.runs - prev.runs;
     const wicketDiff = m.wickets - prev.wickets;
     
-    let isEvent = (runDiff > 0 || wicketDiff > 0);
+    let isEvent = (runDiff !== 0 || wicketDiff > 0);
 
     if (wicketDiff > 0) impact -= 20;
 
@@ -102,8 +102,8 @@ if (isEvent && !eventState[m._id]) {
 
   if (diff < 3) {
     // 🔥 FAST FLUCTUATION (3 sec)
-    oddsA += (Math.random() * 0.3 - 0.15);
-    oddsB += (Math.random() * 0.3 - 0.15);
+    oddsA += (Math.random() * 0.12 - 0.06);
+    oddsB += (Math.random() * 0.12 - 0.06);
                 } else {
     // ✅ STABLE AFTER 3 SEC
     delete eventState[m._id];
