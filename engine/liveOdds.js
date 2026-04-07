@@ -2,6 +2,8 @@
 const Match = require("../models/Match");
 
 // ===================== MEMORY =====================
+const eventState = {};
+
 const lastState = {};
 
 // ===================== UTILS =====================
@@ -64,6 +66,8 @@ async function updateOdds() {
 
     const runDiff = m.runs - prev.runs;
     const wicketDiff = m.wickets - prev.wickets;
+    
+    let isEvent = (runDiff > 0 || wicketDiff > 0);
 
     if (wicketDiff > 0) impact -= 20;
 
@@ -72,6 +76,12 @@ async function updateOdds() {
     if (runDiff === 2) impact += 2;
     if (runDiff === 4) impact += 5;
     if (runDiff === 6) impact += 8;
+    
+    if (isEvent) {
+         eventState[m._id] = {
+                  start: Date.now()
+         };
+      }
 
     let CA = 50 - (rrrEffect + ballEffect + wicketEffect) + impact;
     // 🔥 MICRO ON % (hidden)
@@ -83,6 +93,22 @@ async function updateOdds() {
 
     let oddsA = (100 / CA) * 0.9;
     let oddsB = (100 / CB) * 0.9;
+    
+    // ================= EVENT TRAP =================
+   let trap = eventState[m._id];
+
+  if (trap) {
+   let diff = (Date.now() - trap.start) / 1000;
+
+  if (diff < 3) {
+    // 🔥 FAST FLUCTUATION (3 sec)
+    oddsA += (Math.random() * 0.3 - 0.15);
+    oddsB += (Math.random() * 0.3 - 0.15);
+                } else {
+    // ✅ STABLE AFTER 3 SEC
+    delete eventState[m._id];
+                      }
+                }
 
 // ================= MICRO MOVEMENT =================
     
