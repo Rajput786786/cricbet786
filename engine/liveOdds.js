@@ -77,7 +77,7 @@ async function updateOdds() {
     if (runDiff === 4) impact += 5;
     if (runDiff === 6) impact += 8;
     
-if (isEvent && !eventState[m._id]) {
+if (isEvent && (!eventState[m._id] || (Date.now() - eventState[m._id].start) > 3000)) {
   eventState[m._id] = {
     start: Date.now()
   };
