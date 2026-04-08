@@ -2,8 +2,17 @@
 const Match = require("../models/Match");
 
 // ===================== MEMORY =====================
-const eventState = {};
+let trap = eventState[m._id];
+// TIMING STATE
+let phase = phaseState[m._id];
 
+if (!phase) {
+  phaseState[m._id] = {
+    lastUpdate: Date.now()
+  };
+}
+
+const eventState = {};
 const lastState = {};
 
 // ===================== UTILS =====================
@@ -85,7 +94,21 @@ if (isEvent && (!eventState[m._id] || (Date.now() - eventState[m._id].start) > 3
 
     let CA = 50 - (rrrEffect + ballEffect + wicketEffect) + impact;
     // 🔥 MICRO ON % (hidden)
-    let micro = (Math.random() * 0.2 - 0.1);
+    let microSpeed = 0.05;
+
+// 🔥 AFTER EVENT (stable window)
+if (eventState[m._id]) {
+  let diff = (Date.now() - eventState[m._id].start) / 1000;
+
+  if (diff < 3) {
+    microSpeed = 0; // trap time → no micro
+  } else if (diff < 6) {
+    microSpeed = 0.01; // stable window
+  }
+}
+
+// 🔥 NORMAL PLAY
+let micro = (Math.random() * microSpeed - microSpeed / 2);
     CA += micro;
 
     CA = clamp(CA, 0.1, 99.9);
